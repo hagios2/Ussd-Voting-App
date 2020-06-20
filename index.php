@@ -9,7 +9,7 @@ $query = require 'core/bootstrap.php';
 
 
 
-
+var_dump(Request::url());
 /*
 *    
 */

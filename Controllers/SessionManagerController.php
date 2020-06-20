@@ -1,9 +1,5 @@
 <?php
 
 
-class SessionManager
-{
+echo 'i am here';
 
-
-    
-}

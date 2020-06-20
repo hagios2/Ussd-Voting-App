@@ -12,10 +12,10 @@ class Router
     public static function load($file)
     {
 
-        $router = require $file;
-
-
-        //
+        $router = new static;
+        
+        
+        require $file;
 
 
         return $router;
@@ -29,13 +29,22 @@ class Router
     }
 
 
-    public function function($url)
+
+
+    public function direct($url)
     {
+
+        /* 
+        *   Search through the defined routes 
+        *
+        *   if uri exists direct it to the coresponding controller 
+        *
+        */
 
 
         if(array_key_exists($url, $this->routes))
         {
-            
+
 
             return $this->routes[$url];
 

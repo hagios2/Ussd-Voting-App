@@ -8,6 +8,6 @@
 
 $router->define([
 
-    '/' => 'Controllers/SessionManagerController.php'
+    '' => 'Controllers/SessionManagerController.php'
 
 ]);
