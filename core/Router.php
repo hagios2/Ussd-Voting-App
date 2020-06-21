@@ -5,7 +5,35 @@ class Router
 {
 
 
-    protected $routes = [];
+    protected $routes = [
+
+        'GET' => [],
+
+
+        'POST' => []
+
+    ];
+
+
+
+    public function get($uri, $controller)
+    {
+
+
+        $this->routes['GET'][$url] = $controller;
+    
+    
+    }
+
+
+    public function post($uri, $controller)
+    {
+
+
+        $this->routes['POST'][$uri] = $controller;
+    
+    
+    }
 
 
 
@@ -22,16 +50,8 @@ class Router
     }
 
 
-    public function define($routes)
-    {
 
-        $this->routes = $routes;
-    }
-
-
-
-
-    public function direct($url)
+    public function direct($url,  $requestType)
     {
 
         /* 
@@ -42,16 +62,16 @@ class Router
         */
 
 
-        if(array_key_exists($url, $this->routes))
+        if(array_key_exists($url, $this->routes[$requestType]))
         {
 
 
-            return $this->routes[$url];
+            return $this->routes[$requestType][$url];
 
         }
 
 
-        Throw new Exception('Route not found');
+        Throw new Exception('Route not defined for this URI');
     }
 
 

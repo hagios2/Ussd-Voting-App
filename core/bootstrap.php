@@ -15,11 +15,11 @@ require 'core/Request.php';
 require 'core/database/Connection.php';
 
 
-$app['database'] = require 'core/database/QueryBuilder.php';
+require 'core/database/QueryBuilder.php';
 
 
  
-return new QueryBuilder(
+$app['database'] = new QueryBuilder(
 
     Connection::make($app['config']['database'])
 
