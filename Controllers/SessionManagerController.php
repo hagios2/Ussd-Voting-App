@@ -16,38 +16,39 @@ $request = $_POST;
 
 $db = $app['database'];
 
-$seesion_state_count = $db->selectSessionState(['msidn' => $_POST['msidn']]);
+$session_state_count = $db->selectSessionState(['msidn' => $request['msidn']]);
 
 
-if($seesion_state_count === 0)
+if($session_state_count === 0)
 {
-    $db->insertSessionMsidn(['msidn' => $_POST['msidn']]);   
+    $db->insertSessionMsidn(['msidn' => $request['msidn']]);   
 
 
-    return displayWelcomeText();
+    echo displayWelcomeText();
    
 
 }else {
 
 
-    switch ($seesion_state_count) {
+    switch ($session_state_count) {
 
         case 1:
 
             if(substr($request['short_code'], 0, 5) == '899*9')
             {
 
-                return displayWelcomeText();
+                return displayWelcomeText(); 
             
             
             }elseif($request['answer'] == 1){
 
+
                 //insert transaction type == register
-                $db->updateSessionTransanctionType([
+               $db->updateSessionTransanctionType([
                     
                         'transaction_type' => 'Register_Personal_Pension',
                     
-                        'msidn' => $_POST['msidn']
+                        'msidn' => $request['msidn']
                         
                     ]);   
 
@@ -56,6 +57,8 @@ if($seesion_state_count === 0)
                 $type = 1;
               
                 $cost = 0;
+
+                echo $reply; 
             
             }elseif($request['answer'] == 2){
 
@@ -65,7 +68,7 @@ if($seesion_state_count === 0)
                     
                     'transaction_type' => 'Pay_Personal_Pension',
                 
-                    'msidn' => $_POST['msidn']
+                    'msidn' => $request['msidn']
                     
                 ]);  ;   
 
@@ -75,6 +78,8 @@ if($seesion_state_count === 0)
               
                 $cost = 0;
 
+                echo $reply;
+
             }elseif($request['answer'] == 3){
 
                 //insert transaction type == update
@@ -83,7 +88,7 @@ if($seesion_state_count === 0)
                     
                     'transaction_type' => 'Update_Key_Data',
                 
-                    'msidn' => $_POST['msidn']
+                    'msidn' => $request['msidn']
                     
                 ]);  
 
@@ -93,6 +98,8 @@ if($seesion_state_count === 0)
             
                 $cost = 0;
 
+                echo $reply;
+
             }elseif($request['answer'] == 4){
 
                 //insert transaction type == Enquiries
@@ -101,7 +108,7 @@ if($seesion_state_count === 0)
                     
                         'transaction_type' => 'Enquiries',
                     
-                        'msidn' => $_POST['msidn']
+                        'msidn' => $request['msidn']
                         
                     ]);  
 
@@ -111,6 +118,8 @@ if($seesion_state_count === 0)
             
                 $cost = 0;
 
+                echo $reply;
+
             }
 
             break;
@@ -118,7 +127,9 @@ if($seesion_state_count === 0)
 
         case 2:
 
-            $transactionType = $db->getTransactionType(['msidn' => $_POST['msidn']]);
+
+           $transactionType = $db->getTransactionType(['msidn' => $request['msidn']]);
+
 
 
             if(substr($request['short_code'], 0, 5) == '899*9')
@@ -127,51 +138,59 @@ if($seesion_state_count === 0)
                 /* 
                 *   find the msidn and clear its transaction type 
                 *
-                *   for the proceeding request to be handled by the *   appropirate switch case
+                *   for the proceeding request to be handled by the appropirate switch case 
                 *
                 *   return then welcome text   
                 */
 
                 $db->updateSessionTransanctionType([
                     
-                    'transaction_type' => null,
+                    'transaction_type' => Null,
                 
-                    'msidn' => $_POST['msidn']
+                    'msidn' => $request['msidn']
                     
                 ]);
 
 
 
-                return displayWelcomeText();
+
+                echo displayWelcomeText();
           
             
             }elseif($transactionType == 'Register_Personal_Pension' && $request['answer'] == 1){
 
 
+                /* 
+                *   Update session manage table T1
+                */
+                /* 
                 $db->updateSessionTFields([
                     
-                    'transaction_type' => null,
+                    'T1' => 'Selected_New_Member',
                 
-                    'msidn' => $_POST['msidn']
+                    'msidn' => $request['msidn']
                     
-                ]);
+                ]); */
 
 
-                //transaction type already exists in db
-          
+                /* 
+                    Call function to insert bio data
+                */
 
-                $reply = "Register Personal Pension \r\n Enter Key bio data"; //write a function to the bio data
-              
-                $type = 1;
-              
-                $cost = 0;
+                return insertBioData($db, $request);
 
+
+        
             
             }elseif($transactionType == 'Register_Personal_Pension' && $request['answer'] == 2){
 
-
-                //transaction type already exists in db
-               // $db->insertSessionMsidn(['msidn' => $_POST['msidn']]);   
+                $db->updateSessionTFields([
+                    
+                    'T1' => 'Selected_Existing_Tier',
+                
+                    'msidn' => $request['msidn']
+                    
+                ]);  
 
                 $reply = "Existing Tier 2/PF Member \r\n Enter Member ID"; //write a 
               
@@ -179,75 +198,864 @@ if($seesion_state_count === 0)
               
                 $cost = 0;
             
-
+                echo $reply;
 
             }elseif($transactionType == 'Pay_Personal_Pension'){
 
                 //insert member id 
 
+                $db->findMember([
+                    
+                    'member_id' => $request['answser'],
 
-                //transaction type already exists in db
-               // $db->insertSessionMsidn(['msidn' => $_POST['msidn']]);   
+                    'phone' => $request['msidn'],
+                    
+                ]);
+
+
+
+                //if found
+
+
+                $db->updateSessionTFields([
+                    
+                    'T1' => 'Entered_Member_id',
+                
+                    'msidn' => $request['msidn']
+                    
+                ]); 
+
+                #refactor later
 
                $reply = "Enter Amount";
+
+               $type = 1;
               
-                $type = 1;
+               $cost = 0;  
+               
+               echo reply;
+
+
+
+               #else return invalid input
               
-                $cost = 0;    
-
-            }/* elseif($request['answer'] == 2){
-
-                //transaction type already exits in db
-
-               // $db->insertSessionMsidn(['msidn' => $_POST['msidn']]);   
-
-                $reply = "Pay Personal Pension \r\n Enter Key Bio data Information";
-              
-                $type = 1;
-              
-                $cost = 0;
-
-            } */
+        
+            }
 
             break;
 
         case 3:
 
-            $transactionType = $db->getTransactionType(['msidn' => $_POST['msidn']]);
+            $transactionType = $db->getTransactionType(['msidn' => $request['msidn']]);
+
+            $T1 = $db->getTField(['T1','msidn' => $request['msidn']]);
 
             if(substr($request['short_code'], 0, 5) == '899*9')
             {
 
-                //find the msidn and clear its transaction type
+                /* 
+                *   find the msidn and clear its transaction type 
+                *
+                *   for the proceeding request to be handled by the appropirate switch case 
+                *
+                *   return then welcome text   
+                */
+
+                $db->updateSessionTransanctionType([
+                    
+                    'transaction_type' => Null,
                 
-                $reply = "Welcome to QLAC FINANCIAL TRUST LTD \r\n 1. Register Personal Pension \r\n 2. Pay Personal Pension 3. Update Key Data \r\n 4. Enquiries";
+                    'msidn' => $request['msidn']
+                    
+                ]);
+
+
+                /* 
+                *     if transaction type == Register Personal Pension 
+                *      
+                *     clear incomplete biodata for this session
+                *
+                *     restart the flow   
+                */
+
+                if($transactionType == 'Register_Personal_Pension')
+                {
+
+                    $db->clearIncompleteSessionBioData(['phone' => $request['msidn']]);
+                }
+
+
+                
+                displayWelcomeText();
+
+
+
+            }elseif($transactionType == 'Register_Personal_Pension' && $T1 == 'Inserted_Member_id'){
+
+
+                #call function to display bio dataprompt
+
+
+               insertBioData($db, $request);
+
+
+            }elseif($transactionType == 'Register_Personal_Pension' && $T1 == 'Selected_Existing_Tier'){
+
+                //insert member id 
+
+               $member_id =  $db->findMember([
+    
+                    'member_id' => $request['answer'],
+
+                    'msidn' => $request['msidn'],
+                    
+                ]);
+                
+                if(!empty($member_id))
+                {
+                    $db->updateSessionTFields([
+                    
+                        'T2' => 'Entered_Member_ID',
+                    
+                        'msidn' => $request['msidn']
+                        
+                    ]); 
+
+
+                    $reply = "1. View Key Data \r\n 2. Cancel";
+                
+                }else{
+
+                    $reply = "Invalid Member ID! Try again ";
+
+                }
+               
+
+                #refactor later
+
 
                 $type = 1;
-            
-                $cost = 0;
-            
-        /*     
-            }elseif($){
+                
+                $cost = 0;  
+                
+                echo $reply;
 
- */
+
+
+            }elseif($transactionType == 'Pay_Personal_Pension'){
+
+
+                //persist amount in db
+
+
+                $db->updateSessionTFields([
+                    
+                    'T2' => 'Entered_Amount',
+                
+                    'msidn' => $request['msidn']
+                    
+                ]); 
+
+
+               $reply = "Enter Mobile Money Pin";
+               
+               $type = 1;
+              
+               $cost = 0;  
+               
+               echo reply;
+
 
             }
 
+            break;
+    
+        case 4:
 
+            $transactionType = $db->getTransactionType(['msidn' => $request['msidn']]);
+
+
+            $T2 = $db->getTField(['T2','msidn' => $request['msidn']]);
+
+
+            if(substr($request['short_code'], 0, 5) == '899*9')
+            {
+
+                /* 
+                *   find the msidn and clear its transaction type 
+                *
+                *   for the proceeding request to be handled by the appropirate switch case 
+                *
+                *   return then welcome text   
+                */
+
+                $db->updateSessionTransanctionType([
+                    
+                    'transaction_type' => Null,
+                
+                    'msidn' => $request['msidn']
+                    
+                ]);
+
+
+                /* 
+                *     if transaction type == Register Personal Pension 
+                *      
+                *     clear incomplete biodata for this session
+                *
+                *     restart the flow   
+                */
+
+                if($transactionType == 'Register_Personal_Pension')
+                {
+
+                    $db->clearIncompleteSessionBioData(['phone' => $request['msidn']]);
+                }
+
+
+                
+                displayWelcomeText();
+
+
+            }elseif($transactionType == 'Register_Personal_Pension' &&  $T2 == 'Inserted_Surname'){
+
+
+                /* 
+                *      
+                *     call function to insert request input in appropirate input
+                */
+
+                insertBioData($db, $request);
+
+            }elseif($transactionType == 'Register_Personal_Pension' &&  $T2 == 'Entered_Member_ID'){
+
+                if($request['answer'] == 1)
+                {
+
+                    $bio_data = $db->fetchBioData(['msidn' => $request['msidn']]);
+
+                    $data = [
+    
+                        'member_id' => $bio_data['member_id'],
+    
+    
+                        'name' =>  $bio_data['firstname'].' '.$bio_data['other_names'].' '.$bio_data['surname'],
+    
+    
+                        'dob' => $bio_data['dob'],
+    
+    
+                        'gender' => $bio_data['gender'],
+    
+    
+                        'nationality' => $bio_data['nationality']
+    
+    
+                    ];
+
+    
+                    $db->updateSessionTFields([
+                        
+                        'T3' => 'Viewed_BioData',
+                    
+                        'msidn' => $request['msidn']
+                        
+                    ]); 
+    
+                    
+    
+                    $reply = sprintf("Personal Pension Details \r\n ------------------------
+                    Member ID: \t %s \r\n Name: \t %s  \r\n D.O.B: \t %s \r\n Gender: \t %s \r\n Nationality: \t %s \r\n\r\n 1. Press to Approve", $data['member_id'], $data['name'], $data['dob'], $data['gender'], $data['nationality']);
+                    /* implode(',', array_values($data))) */;
+
+
+                    echo $reply;
+
+                    $cost = 0;
+
+                    $type = 1;
+
+                }else{
+
+                    $db->deleteSession(['msidn' => $request['msidn']]);
+
+                    $cost = 0;
+
+                    $type = 3;
+                }
+
+                
+             
+
+            }elseif($transactionType == 'Pay_Personal_Pension' &&  $T2 == 'Inserted_Member_id'){
+
+                #process payment 
+
+                $db->updateSessionTFields([
+                    
+                    'T3' => 'Enter_Mobile_Money_Pin',
+                
+                    'msidn' => $request['msidn']
+                    
+                ]); 
+
+
+                #confirm payment
+
+                $reply = "You have transferred an amount";
+
+            }
+
+         break;
+
+        case 5:
+
+
+            $transactionType = $db->getTransactionType(['msidn' => $request['msidn']]);
+
+
+            $T3 = $db->getTField(['T3','msidn' => $request['msidn']]);
+
+
+            
+            if(substr($request['short_code'], 0, 5) == '899*9')
+            {
+
+                /* 
+                *   find the msidn and clear its transaction type 
+                *
+                *   for the proceeding request to be handled by the appropirate switch case 
+                *
+                *   return then welcome text   
+                */
+
+                $db->updateSessionTransanctionType([
+                    
+                    'transaction_type' => Null,
+                
+                    'msidn' => $request['msidn']
+                    
+                ]);
+
+
+                /* 
+                *     if transaction type == Register Personal Pension 
+                *      
+                *     clear incomplete biodata for this session
+                *
+                *     restart the flow   
+                */
+
+                if($transactionType == 'Register_Personal_Pension')
+                {
+
+                    $db->clearIncompleteSessionBioData(['phone' => $request['msidn']]);
+                }
+
+
+                
+                displayWelcomeText();
+
+
+            }elseif($transactionType == 'Register_Personal_Pension' &&  $T3 == 'Inserted_Firstname'){
+
+
+                /* 
+                *      
+                *     call function to insert request input in appropirate input
+                */
+
+                insertBioData($db, $request);
+
+            }elseif($transactionType == 'Register_Personal_Pension' &&  $T3 == 'Viewed_BioData'){
+
+
+                $db->approveBioData([
+        
+                    'verified_at' => Date('Y-m-d H:i:s'),
+
+                    'msidn' => $request['msidn']
+
+                ]);
+
+
+                $db->deleteSession(['msidn' => $request['msidn']]);
+
+
+                $reply = "Approved account Details";
+
+                echo $reply;
+
+                $type = 3;
+
+                $cost = 0;
+
+
+            }
 
             break;
-        default:
+
+        case 6:
+
+
+
+            $transactionType = $db->getTransactionType(['msidn' => $request['msidn']]);
+
+
+            $T4 = $db->getTField(['T4','msidn' => $request['msidn']]);
+
+
+
+            if(substr($request['short_code'], 0, 5) == '899*9')
+            {
+
+                /* 
+                *   find the msidn and clear its transaction type 
+                *
+                *   for the proceeding request to be handled by the appropirate switch case 
+                *
+                *   return then welcome text   
+                */
+
+                $db->updateSessionTransanctionType([
+                    
+                    'transaction_type' => Null,
+                
+                    'msidn' => $request['msidn']
+                    
+                ]);
+
+
+                /* 
+                *     if transaction type == Register Personal Pension 
+                *      
+                *     clear incomplete biodata for this session
+                *
+                *     restart the flow   
+                */
+
+                if($transactionType == 'Register_Personal_Pension')
+                {
+
+                    $db->clearIncompleteSessionBioData(['phone' => $request['msidn']]);
+                }
+
+
+                
+                displayWelcomeText();
+
+
+            }elseif($transactionType == 'Register_Personal_Pension' &&  $T4 == 'Inserted_Other_names'){
+
+
+                /* 
+                *      
+                *     call function to insert request input in appropirate input
+                */
+
+                insertBioData($db, $request);
+
+            }
+            break;
+
+        case 7:
+
+
+            $transactionType = $db->getTransactionType(['msidn' => $request['msidn']]);
+
+
+            $T5 = $db->getTField(['T5','msidn' => $request['msidn']]);
+
+
+            if(substr($request['short_code'], 0, 5) == '899*9')
+            {
+
+                /* 
+                *   find the msidn and clear its transaction type 
+                *
+                *   for the proceeding request to be handled by the appropirate switch case 
+                *
+                *   return then welcome text   
+                */
+
+                $db->updateSessionTransanctionType([
+                    
+                    'transaction_type' => Null,
+                
+                    'msidn' => $request['msidn']
+                    
+                ]);
+
+
+                /* 
+                *     if transaction type == Register Personal Pension 
+                *      
+                *     clear incomplete biodata for this session
+                *
+                *     restart the flow   
+                */
+
+                if($transactionType == 'Register_Personal_Pension')
+                {
+
+                    $db->clearIncompleteSessionBioData(['phone' => $request['msidn']]);
+                }
+
+
+                
+                displayWelcomeText();
+
+
+            }elseif($transactionType == 'Register_Personal_Pension' &&  $T5 == 'Inserted_dob'){
+
+
+                /* 
+                *      
+                *     call function to insert request input in appropirate input
+                */
+
+                insertBioData($db, $request);
+
+            }
+            break;
+        case 8;
+
+
+            $transactionType = $db->getTransactionType(['msidn' => $request['msidn']]);
+
+
+            $T6 = $db->getTField(['T6','msidn' => $request['msidn']]);
+
+
+            if(substr($request['short_code'], 0, 5) == '899*9')
+            {
+
+                /* 
+                *   find the msidn and clear its transaction type 
+                *
+                *   for the proceeding request to be handled by the appropirate switch case 
+                *
+                *   return then welcome text   
+                */
+
+                $db->updateSessionTransanctionType([
+                    
+                    'transaction_type' => Null,
+                
+                    'msidn' => $request['msidn']
+                    
+                ]);
+
+
+                /* 
+                *     if transaction type == Register Personal Pension 
+                *      
+                *     clear incomplete biodata for this session
+                *
+                *     restart the flow   
+                */
+
+                if($transactionType == 'Register_Personal_Pension')
+                {
+
+                    $db->clearIncompleteSessionBioData(['phone' => $request['msidn']]);
+                }
+
+
+                
+                displayWelcomeText();
+
+
+            }elseif($transactionType == 'Register_Personal_Pension' &&  $T6 == 'Inserted_Gender'){
+
+                /* 
+                *      
+                *     call function to insert request input in appropirate input
+                */
+
+                insertBioData($db, $request);
+
+            }
+        break;
+
+        case 9;
+
+
+            $transactionType = $db->getTransactionType(['msidn' => $request['msidn']]);
+
+
+            $T7 = $db->getTField(['T7','msidn' => $request['msidn']]);
+
+
+            if(substr($request['short_code'], 0, 5) == '899*9')
+            {
+
+                /* 
+                *   find the msidn and clear its transaction type 
+                *
+                *   for the proceeding request to be handled by the appropirate switch case 
+                *
+                *   return then welcome text   
+                */
+
+                $db->updateSessionTransanctionType([
+                    
+                    'transaction_type' => Null,
+                
+                    'msidn' => $request['msidn']
+                    
+                ]);
+
+
+                /* 
+                *     if transaction type == Register Personal Pension 
+                *      
+                *     clear incomplete biodata for this session
+                *
+                *     restart the flow   
+                */
+
+                if($transactionType == 'Register_Personal_Pension')
+                {
+
+                    $db->clearIncompleteSessionBioData(['phone' => $request['msidn']]);
+                }
+
+
+                
+                displayWelcomeText();
+
+
+            }elseif($transactionType == 'Register_Personal_Pension' &&  $T7 == 'Inserted_Nationality'){
+
+                /* 
+                *      
+                *     call function to insert request input in appropirate input
+                */
+
+                insertBioData($db, $request);
+
+            }
+
+        break;
+
     }
 }
 
 
-function insertBioData($request)
+function insertBioData($db, $request)
 {
 
-    /* if()
+    # get the sum of inserted fields on bio data table for rhis session 
+
+
+   $field_count = $db->selectBioDataCount(['msidn' => $request['msidn']]);
+  
+
+    if($field_count === 0)
     {
 
-    } */
+
+        $db->insertInitialBioData([
+
+            'member_id' => substr(sha1(time()), 0, 5),
+
+            'msidn' => $request['msidn']
+
+        ]);
+
+
+
+        $db->updateSessionTFields([
+                    
+            'T1' => 'Inserted_Member_id',
+                
+            'msidn' => $request['msidn']
+            
+        ]);
+
+
+        $reply = "Enter Surname";
+
+        echo $reply;
+
+        $type = 1;
+    
+        $cost = 0;
+    
+    }elseif($field_count === 1){
+
+        
+        $db->insertOtherBioData(['surname' => $request['answer'], 'msidn' => $request['msidn']]);
+
+
+
+        $db->updateSessionTFields([
+                    
+            'T2' => 'Inserted_Surname',
+                
+            'msidn' => $request['msidn']
+            
+        ]);
+        
+
+        $reply = "Enter first name";
+
+        $type = 1;
+    
+        $cost = 0;
+
+
+        echo $reply;
+    
+    
+    }elseif($field_count === 2){
+
+
+        $db->insertOtherBioData(['firstname' => $request['answer'],  'msidn' => $request['msidn']]);
+
+        $db->updateSessionTFields([
+                    
+            'T3' => 'Inserted_Firstname',
+                
+            'msidn' => $request['msidn']
+            
+        ]);
+
+        $reply = "Enter Other names Or press 1. to skip";
+
+        echo $reply;
+
+        $type = 1;
+    
+        $cost = 0;
+
+    
+    }elseif($field_count === 3){
+
+
+        $db->insertOtherBioData([
+
+            'other_names' => $request['answer'] == 1 ? '' : $request['answer'],
+
+            'msidn' => $request['msidn']
+
+        ]);
+
+
+        $db->updateSessionTFields([
+                    
+            'T4' => 'Inserted_Other_names',
+                
+            'msidn' => $request['msidn']
+            
+        ]);
+
+
+
+        $reply = "Enter Date of Birth (YYYY-MM-DD)";
+
+        echo $reply;
+
+        $type = 1;
+    
+        $cost = 0;
+
+
+    }elseif($field_count === 4){
+
+      
+        
+        $db->insertOtherBioData(['dob' => date_format(date_create($request['answer']), "Y-m-d"), 'msidn' => $request['msidn']]);
+
+
+
+        $db->updateSessionTFields([
+                    
+            'T5' => 'Inserted_dob',
+                
+            'msidn' => $request['msidn']
+            
+        ]);
+
+        $reply = "Select Gender \r\n 1. Male \r\n 2. Female";
+
+        echo $reply;
+
+        $type = 1;
+    
+        $cost = 0;
+
+
+    }elseif($field_count === 5){
+
+
+        if($request['answer'] == 1)
+        {
+
+            $db->insertOtherBioData(['gender' => 'Male', 'msidn' => $request['msidn']]);
+
+
+        }elseif($request['answer'] == 2){
+
+
+            $db->insertOtherBioData(['gender' => 'Female', 'msidn' => $request['msidn']]);
+
+        }
+
+
+
+        $db->updateSessionTFields([
+                    
+            'T6' => 'Inserted_Gender',
+                
+            'msidn' => $request['msidn']
+            
+        ]);
+
+
+        $reply = "Enter Nationality";
+
+        echo $reply;
+
+        $type = 1;
+    
+        $cost = 0;
+
+      
+
+        
+    
+    }elseif($field_count === 6){
+
+
+        $db->insertOtherBioData(['nationality' => $request['answer'], 'msidn' => $request['msidn']]);
+
+            /*      $db->updateSessionTFields([
+                                
+                        'T7' => 'Inserted_Nationality',
+                            
+                        'msidn' => $request['msidn']
+                        
+                    ]);
+            */
+        $member_id = $db->getMemberID(['msidn' => $request['msidn']]);
+
+        $db->deleteSession(['msidn' => $request['msidn']]);
+
+
+        $reply = "Congratulations, You've registered with QLAC FINANCIAL TRUST LTD \r\n Your Member ID: $member_id";
+
+        echo $reply;
+
+        $type = 3;
+    
+        $cost = 0;
+
+        
+    }
+
+    
 
 }
 
@@ -255,15 +1063,10 @@ function insertBioData($request)
 
 function displayWelcomeText()
 {
-    $reply = "Welcome to QLAC FINANCIAL TRUST LTD \r\n 1. Register Personal Pension \r\n 2. Pay Personal Pension 3. Update Key Data \r\n 4. Enquiries";
+    return $reply = "Welcome to QLAC FINANCIAL TRUST LTD \r\n 1. Register Personal Pension \r\n 2. Pay Personal Pension 3. Update Key Data \r\n 4. Enquiries";
 
     $type = 1;
 
     $cost = 0;
 
 }
-
-
-
-
-

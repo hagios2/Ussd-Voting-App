@@ -30,7 +30,9 @@ class QueryBuilder
 
         }catch(Exception $e){
 
-            die('Whoops, somthing went wrong');
+         /*    die('Whoops, somthing went wrong'); */
+
+            die($e->getMessage());
 
         }
 
@@ -52,19 +54,17 @@ class QueryBuilder
         }catch(Exception $e) {
 
 
-           die('Whoops, somthing went wrong');
+           die($e->getMessage());
 
         }
 
     
 
-     /*    return $statement->fetchAll(PDO::FETCH_CLASS); */
-
     }
 
 
    public function insertSessionMsidn($parameters)
-    {
+   {
         $sql = sprintf(
             
             "INSERT INTO session_manager_table (msidn) VALUES (%s)",  ':'.key($parameters)
@@ -73,8 +73,7 @@ class QueryBuilder
 
         $this->insert($sql, $parameters);
 
-
-       
+  
     }
 
 
@@ -85,7 +84,7 @@ class QueryBuilder
 
         $sql = sprintf(
             
-                "SELECT count(msidn), count(transaction_type), count(T1), count(T2), count(T3), count(T4)
+                "SELECT count(msidn), count(transaction_type), count(T1), count(T2), count(T3), count(T4), count(T5), count(T6), count(T7), count(T8), count(T9)
                 
                 FROM session_manager_table WHERE %s = %s", implode(', ', array_keys($parameters)), ':'.implode(', :', array_keys($parameters))
                 
@@ -93,15 +92,9 @@ class QueryBuilder
 
         $results = $this->select($sql, $parameters);
 
-       $sum = 0;
+        return array_sum(array_values((array)$results[0]));
 
-       foreach($results[0] as $key => $value)
-       {
-            $sum += $value;
-       }
-
-       return $sum;
-
+ 
     }
 
 
@@ -115,9 +108,14 @@ class QueryBuilder
 
 
 
-        return $this->select($sql, $msidn);
+        $results = $this->select($sql, $msidn);
+
+
+        return array_values((array)$results[0])[0];
 
     }
+
+
 
 
 
@@ -126,12 +124,13 @@ class QueryBuilder
     {
         $sql = sprintf(
             
-            "UPDATE session_manager_table SET %s = %s WHERE %s = %s", implode(',', array_keys($parameters)), ':'.implode(', :', array_keys($parameters))
-        );
-        
+            "UPDATE session_manager_table SET transaction_type = %s WHERE msidn = %s", ':transaction_type', ':msidn'
+        );  
+  
 
 
-        $this->insert($sql, $parameters);
+
+       $this->insert($sql, $parameters);
 
 
        
@@ -143,38 +142,215 @@ class QueryBuilder
 
     public function updateSessionTFields($parameters)
     {
+   
+
         $sql = sprintf(
             
-            "UPDATE session_manager_table SET %s = %s WHERE msidn = %s", implode(', :', array_keys($parameters)), ':'.implode(', :', array_keys($parameters))
+            "UPDATE session_manager_table SET %s  WHERE %s ", 
+            
+            implode('', [array_key_first($parameters), ' = :'.array_key_first($parameters)]), 
+            
+            implode('', [array_key_last($parameters), ' = :'.array_key_last($parameters)])
         );
 
 
         $this->insert($sql, $parameters);
-
 
        
     }
 
 
 
+    public function getTField($parameters)
+    {
+   
+
+        $sql = sprintf(
+            
+            "SELECT %s FROM session_manager_table WHERE %s ", $parameters[0], 
+            
+            implode('', [array_key_last($parameters), ' = :'.array_key_last($parameters)])
+        );
+
+        unset($parameters[0]);
+
+
+       $results = $this->select($sql, $parameters);
+
+
+       return array_values((array)$results[0])[0];
+
+       
+    }
 
 
 
-
-
-/*     public function updateSessionState($parameters)
+    public function insertInitialBioData($parameters)
     {
 
-        array_keys();
+        $sql = sprintf(
+            
+            "INSERT INTO pensioners_biodata_table (%s) VALUES (%s)", implode(', ', array_keys($parameters)),  ':'.implode(', :', array_keys($parameters))
+        );
 
-        array_v        
-        sprintf(INSERT INTO )
-        $statement = $this->pdo->prepare("INSERT INTO  * FROM {$table}");
 
-        $statement->execute();
 
-        return $statement->fetchAll(PDO::FETCH_CLASS);
+        $this->insert($sql, $parameters);
 
-    } */
+    }
+
+    public function insertOtherBioData($parameters)
+    {
+
+        $sql = sprintf(
+            
+            "UPDATE pensioners_biodata_table SET %s  WHERE %s ", 
+            
+            implode('', [array_key_first($parameters), ' = :'.array_key_first($parameters)]), 
+            
+            implode('', [array_key_last($parameters), ' = :'.array_key_last($parameters)])
+        );
+
+
+
+        $this->insert($sql, $parameters);
+
+    }
+
+
+
+     public function selectBioDataCount($parameters)
+    {
+
+        $sql = sprintf(
+            
+            "SELECT count(member_id), count(surname), count(firstname), count(other_names), count(dob), count(gender), count(nationality) FROM pensioners_biodata_table WHERE %s = %s", key($parameters), ':'. key($parameters)
+            
+        );
+
+
+
+       $result = $this->select($sql, $parameters);
+
+       return array_sum(array_values((array)$result[0]));
+
+    }
+
+
+
+    public function clearIncompleteSessionBioData($parameters)
+    {
+
+        $sql = $sql = sprintf(
+            
+            "DELETE FROM pensioners_biodata_table WHERE %s = %s", key($parameters), ':'. key($parameters)
+            
+        );
+
+
+        $this->insert($parameters);
+
+    }
+
+
+
+
+    public function deleteSession($parameters)
+    {
+
+        $sql = $sql = sprintf(
+            
+            "DELETE FROM session_manager_table WHERE %s = %s", key($parameters), ':'. key($parameters)
+            
+        );
+
+
+        $this->insert($sql, $parameters);
+    } 
+
+
+
+    public function getMemberID($parameters)
+    {
+
+        $sql = sprintf(
+            
+            "SELECT %s FROM pensioners_biodata_table WHERE %s ", $parameters[0], 
+            
+            implode('', [array_key_last($parameters), ' = :'.array_key_last($parameters)])
+        );
+
+        unset($parameters[0]);
+
+
+       $results = $this->select($sql, $parameters);
+
+
+       return array_values((array)$results[0])[0];
+    }
+
+
+
+    public function findMember($parameters)
+    {
+        $sql = sprintf(
+            
+            "SELECT * FROM pensioners_biodata_table WHERE %s AND %s", 
+
+            implode('', [array_key_first($parameters), ' = :'.array_key_first($parameters)]),
+            
+            implode('', [array_key_last($parameters), ' = :'.array_key_last($parameters)])
+        );
+
+
+
+        $results = (array)$this->select($sql, $parameters);
+
+      
+        return $results[0];
+
+ 
+    }
+
+
+
+
+    public function fetchBioData($parameters)
+    {
+        $sql = sprintf(
+            
+            "SELECT * FROM pensioners_biodata_table WHERE %s", 
+
+            implode('', [array_key_first($parameters), ' = :'.array_key_first($parameters)])
+        );
+
+
+
+        $results = $this->select($sql, $parameters);
+
+
+        return (array)$results[0];
+
+ 
+    }
+
+
+    public function approveBioData($parameters)
+    {
+        $sql = sprintf(
+            
+            "UPDATE pensioners_biodata_table SET %s  WHERE %s ", 
+            
+            implode('', [array_key_first($parameters), ' = :'.array_key_first($parameters)]), 
+            
+            implode('', [array_key_last($parameters), ' = :'.array_key_last($parameters)])
+        );
+
+
+        $this->insert($sql, $parameters);
+    }
+
+
+
 
 }
