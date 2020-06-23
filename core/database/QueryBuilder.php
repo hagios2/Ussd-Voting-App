@@ -63,11 +63,11 @@ class QueryBuilder
     }
 
 
-   public function insertSessionMsidn($parameters)
+   public function IdentifyUser($parameters)
    {
         $sql = sprintf(
             
-            "INSERT INTO session_manager_table (msidn) VALUES (%s)",  ':'.key($parameters)
+            "INSERT INTO session_manager_table (msisdn) VALUES (%s)",  ':'.key($parameters)
         );
 
 
@@ -78,19 +78,19 @@ class QueryBuilder
 
 
 
-    public function selectSessionState($parameters)
+    public function sessionManager($msisdn)
     {
 
 
         $sql = sprintf(
             
-                "SELECT count(msidn), count(transaction_type), count(T1), count(T2), count(T3), count(T4), count(T5), count(T6), count(T7), count(T8), count(T9)
+                "SELECT count(msisdn), count(transaction_type), count(T1), count(T2), count(T3), count(T4), count(T5), count(T6), count(T7), count(T8), count(T9)
                 
-                FROM session_manager_table WHERE %s = %s", implode(', ', array_keys($parameters)), ':'.implode(', :', array_keys($parameters))
+                FROM session_manager_table WHERE msisdn = %s", ':msisdn'
                 
             );
 
-        $results = $this->select($sql, $parameters);
+        $results = $this->select($sql,['msisdn' => $msisdn]);
 
         return array_sum(array_values((array)$results[0]));
 
@@ -101,14 +101,14 @@ class QueryBuilder
 
 
 
-    public function getTransactionType($msidn)
+    public function GetTransactionType($msisdn)
     {
 
-        $sql = "SELECT transaction_type FROM session_manager_table WHERE msidn = (:msidn)";
+        $sql = "SELECT transaction_type FROM session_manager_table WHERE msisdn = (:msisdn)";
 
 
 
-        $results = $this->select($sql, $msidn);
+        $results = $this->select($sql, $msisdn);
 
 
         return array_values((array)$results[0])[0];
@@ -120,16 +120,16 @@ class QueryBuilder
 
 
 
-    public function updateSessionTransanctionType($parameters)
+    public function updateTransanctionType($parameters)
     {
 
        
 
-        $msidn = $parameters['msidn'];
+        $msisdn = $parameters['msisdn'];
 
         $field = "";
 
-        unset($parameters['msidn']);
+        unset($parameters['msisdn']);
 
         foreach($parameters as $key => $value)
         {
@@ -148,7 +148,7 @@ class QueryBuilder
 
         $field = substr($field, 1);
 
-        $sql = "UPDATE session_manager_table SET  $field WHERE msidn = $msidn";
+        $sql = "UPDATE session_manager_table SET  $field WHERE msisdn = $msisdn";
 
       //die($sql);
     
@@ -266,12 +266,19 @@ class QueryBuilder
 
         $sql = sprintf(
             
-            "DELETE FROM pensioners_biodata_table WHERE %s = %s", key($parameters), ':'. key($parameters)
+            "DELETE FROM pensioners_biodata_table WHERE %s AND %s", 
+
+            implode('', [array_key_first($parameters), ' = :'.array_key_first($parameters)]), 
             
-        );
+            implode('', [array_key_last($parameters), ' = :'.array_key_last($parameters)]));
+        
+   
+        
+        $statement = $this->pdo->prepare($sql);
 
 
-        $this->insert($sql, $parameters);
+        $statement->execute($parameters);
+        #die(var_dump($sql));
 
     }
 
@@ -351,7 +358,6 @@ class QueryBuilder
 
 
         return (array)$results[0];
-
  
     }
 
