@@ -122,18 +122,41 @@ class QueryBuilder
 
     public function updateSessionTransanctionType($parameters)
     {
-        $sql = sprintf(
-            
-            "UPDATE session_manager_table SET transaction_type = %s WHERE msidn = %s", ':transaction_type', ':msidn'
-        );  
-  
 
+       
+
+        $msidn = $parameters['msidn'];
+
+        $field = "";
+
+        unset($parameters['msidn']);
+
+        foreach($parameters as $key => $value)
+        {
+
+            if($value != '')
+            {
+                $field .=  ','.$key. ' = '.  "'$value'"; 
+            }else{
+
+                $field .=  ','.$key. ' = NULL'; 
+            }
+            
+            
+        }
+
+
+        $field = substr($field, 1);
+
+        $sql = "UPDATE session_manager_table SET  $field WHERE msidn = $msidn";
+
+      //die($sql);
+    
 
 
        $this->insert($sql, $parameters);
 
 
-       
     }
 
 
@@ -241,14 +264,14 @@ class QueryBuilder
     public function clearIncompleteSessionBioData($parameters)
     {
 
-        $sql = $sql = sprintf(
+        $sql = sprintf(
             
             "DELETE FROM pensioners_biodata_table WHERE %s = %s", key($parameters), ':'. key($parameters)
             
         );
 
 
-        $this->insert($parameters);
+        $this->insert($sql, $parameters);
 
     }
 
@@ -275,12 +298,10 @@ class QueryBuilder
 
         $sql = sprintf(
             
-            "SELECT %s FROM pensioners_biodata_table WHERE %s ", $parameters[0], 
+            "SELECT member_id FROM pensioners_biodata_table WHERE %s ", 
             
-            implode('', [array_key_last($parameters), ' = :'.array_key_last($parameters)])
+            implode('', [key($parameters), ' = :'.key($parameters)])
         );
-
-        unset($parameters[0]);
 
 
        $results = $this->select($sql, $parameters);
