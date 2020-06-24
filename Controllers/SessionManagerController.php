@@ -118,10 +118,11 @@ if($sess === 0)
             }else{
 
                 $reply = "Invalid input";
-            
+
                 $type = 1;
 
-                #clear session
+                $ussd->deleteSession(['msisdn' => $msisdn]);
+
 
             }
 
@@ -217,6 +218,9 @@ if($sess === 0)
                 $reply = 'Invalid Input';
 
                 $type = 1;
+
+                $ussd->deleteSession(['msisdn' => $msisdn]);
+
             }
 
             break;
@@ -316,6 +320,9 @@ if($sess === 0)
                 $reply = 'Invalid Input';
 
                 $type = 1;
+
+                $ussd->deleteSession(['msisdn' => $msisdn]);
+
             }
 
 
@@ -436,7 +443,9 @@ if($sess === 0)
 
                 $reply = 'Invalid Input';
 
-                $type = 3;
+                $type = 1;
+
+                $ussd->deleteSession(['msisdn' => $msisdn]);
 
             }
 
@@ -504,6 +513,11 @@ if($sess === 0)
 
                 $reply = 'Invalid Input';
 
+                $type = 1;
+
+                $ussd->deleteSession(['msisdn' => $msisdn]);
+
+
             }
 
             break;
@@ -552,6 +566,11 @@ if($sess === 0)
             }else{
 
                 $reply = 'Invalid Input';
+
+                $type = 1;
+
+                $ussd->deleteSession(['msisdn' => $msisdn]);
+
 
             }
 
@@ -618,6 +637,10 @@ if($sess === 0)
 
                 $reply = 'Invalid Input';
 
+                $type = 1;
+
+                $ussd->deleteSession(['msisdn' => $msisdn]);
+
             }
 
             break;
@@ -665,10 +688,16 @@ if($sess === 0)
 
                $reply = insertBioData($ussd, $data, $msisdn);
 
+               $type = 1;
+
             
             }else{
 
                 $reply = 'Invalid Input';
+
+                $type = 1;
+
+                $ussd->deleteSession(['msisdn' => $msisdn]);
 
             }
 
