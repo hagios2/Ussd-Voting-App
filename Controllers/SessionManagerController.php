@@ -1,6 +1,8 @@
 <?php
 
 
+include 'ApplicationFunctions.php';
+
 
 $request = $_POST; 
 
@@ -13,6 +15,8 @@ $data = $request['answer'];
 $ussd = $app['database'];
 
 $cost = 0;
+
+
 
 
 function writeLog($msisdn, $sequence_ID, $case, $request, $response)
@@ -119,7 +123,7 @@ if($sess === 0)
 
                 $reply = "Invalid input";
 
-                $type = 1;
+                $type = 3;
 
                 $ussd->deleteSession(['msisdn' => $msisdn]);
 
@@ -154,14 +158,17 @@ if($sess === 0)
 
                 $reply = displayWelcomeText();
 
-                $cost = 0;
+                $type = 1;
 
+    
             }elseif($transactionType == 'Register_Personal_Pension' && $data == 1){
 
                  
                 # Call function to insert member_id, and prompt user to enter surname
 
                $reply = insertBioData($ussd, $data, $msisdn);
+
+               $type = 1;
                 
 
             }elseif($transactionType == 'Register_Personal_Pension' && $data == 2){
@@ -203,8 +210,6 @@ if($sess === 0)
                     //  $reply = "1. View Key Data \r\n 2. Cancel"; change later
                 
                     $reply = "Enter Amount";
-
-                    $type = 1;
       
                 }else{
 
@@ -212,12 +217,14 @@ if($sess === 0)
 
                 }
 
+                $type = 1;
+
               
             }else{
 
                 $reply = 'Invalid Input';
 
-                $type = 1;
+                $type = 3;
 
                 $ussd->deleteSession(['msisdn' => $msisdn]);
 
@@ -264,6 +271,8 @@ if($sess === 0)
                 #call function to insert surname and display prompt
 
               $reply = insertBioData($ussd, $data, $msisdn);
+
+              $type = 1;
 
 
             }elseif($transactionType == 'Register_Personal_Pension' && $T1 == 'Selected_Existing_Tier'){
@@ -319,7 +328,7 @@ if($sess === 0)
 
                 $reply = 'Invalid Input';
 
-                $type = 1;
+                $type = 3;
 
                 $ussd->deleteSession(['msisdn' => $msisdn]);
 
@@ -363,12 +372,16 @@ if($sess === 0)
 
                 $reply = displayWelcomeText(); 
 
+                $type = 1;
+
 
             }elseif($transactionType == 'Register_Personal_Pension' &&  $T2 == 'Inserted_Surname'){
 
                 #   call function to insert firstname and display promt 
                 
                 $reply = insertBioData($ussd, $data, $msisdn);
+
+                $type = 1;
 
             }elseif($transactionType == 'Register_Personal_Pension' &&  $T2 == 'Entered_Member_ID'){
 
@@ -443,7 +456,7 @@ if($sess === 0)
 
                 $reply = 'Invalid Input';
 
-                $type = 1;
+                $type = 3;
 
                 $ussd->deleteSession(['msisdn' => $msisdn]);
 
@@ -484,12 +497,16 @@ if($sess === 0)
 
                 $reply = displayWelcomeText(); 
 
+                $type = 1;          
+
             }elseif($transactionType == 'Register_Personal_Pension' &&  $T3 == 'Inserted_Firstname'){
 
 
                 # call function to insert othername and display prome
                 
                $reply = insertBioData($ussd, $data, $msisdn);
+
+               $type = 1;
 
             }elseif($transactionType == 'Register_Personal_Pension' &&  $T3 == 'Viewed_BioData'){
 
@@ -513,7 +530,7 @@ if($sess === 0)
 
                 $reply = 'Invalid Input';
 
-                $type = 1;
+                $type = 3;
 
                 $ussd->deleteSession(['msisdn' => $msisdn]);
 
@@ -555,6 +572,8 @@ if($sess === 0)
                 ]);
 
                 $reply = displayWelcomeText(); 
+
+                $type = 1;
                 
             }elseif($transactionType == 'Register_Personal_Pension' &&  $T4 == 'Inserted_Other_names'){
 
@@ -562,12 +581,14 @@ if($sess === 0)
                 # call function to insert dob and display prompt
 
                 $reply = insertBioData($ussd, $data, $msisdn);
+                
+                $type = 1;
 
             }else{
 
                 $reply = 'Invalid Input';
 
-                $type = 1;
+                $type = 3;
 
                 $ussd->deleteSession(['msisdn' => $msisdn]);
 
@@ -626,6 +647,8 @@ if($sess === 0)
                
                 $reply = displayWelcomeText();
 
+                $type = 1;
+
 
             }elseif($transactionType == 'Register_Personal_Pension' &&  $T5 == 'Inserted_dob'){
                
@@ -633,11 +656,13 @@ if($sess === 0)
 
               $reply = insertBioData($ussd, $data, $msisdn);
 
+              $type = 1;
+
             }else{
 
                 $reply = 'Invalid Input';
 
-                $type = 1;
+                $type = 3;
 
                 $ussd->deleteSession(['msisdn' => $msisdn]);
 
@@ -681,6 +706,8 @@ if($sess === 0)
                 ]);
                
                 $reply = displayWelcomeText(); 
+
+                $type = 1;
                 
             }elseif($transactionType == 'Register_Personal_Pension' &&  $T6 == 'Inserted_Gender'){
 
@@ -695,7 +722,7 @@ if($sess === 0)
 
                 $reply = 'Invalid Input';
 
-                $type = 1;
+                $type = 3;
 
                 $ussd->deleteSession(['msisdn' => $msisdn]);
 
@@ -739,6 +766,8 @@ if($sess === 0)
                 ]);
 
                 $reply = displayWelcomeText();
+
+                $type = 1;
 
 
             }   /* elseif($transactionType == 'Register_Personal_Pension' &&  $T7 == 'Inserted_Nationality'){
@@ -801,8 +830,6 @@ function insertBioData($ussd, $data, $msisdn)
 
 
         $reply = "Enter Surname";
-
-        $type = 1;
     
     }elseif($field_count === 1){
         
@@ -818,8 +845,6 @@ function insertBioData($ussd, $data, $msisdn)
         
 
         $reply = "Enter first name";
-
-        $type = 1;
     
     }elseif($field_count === 2){
 
@@ -835,8 +860,6 @@ function insertBioData($ussd, $data, $msisdn)
         ]);
 
         $reply = "Enter Other names Or press 1. to skip";
-
-        $type = 1;
     
     }elseif($field_count === 3){
 
@@ -860,9 +883,6 @@ function insertBioData($ussd, $data, $msisdn)
 
         $reply = "Enter Date of Birth (YYYY-MM-DD)";
 
-        $type = 1;
-
-
     }elseif($field_count === 4){
 
         $ussd->insertOtherBioData(['dob' => date_format(date_create($data), "Y-m-d"), 'msisdn' => $msisdn]);
@@ -877,7 +897,6 @@ function insertBioData($ussd, $data, $msisdn)
 
         $reply = "Select Gender \r\n 1. Male \r\n 2. Female";
 
-        $type = 1;
 
     }elseif($field_count === 5){
 
@@ -901,8 +920,6 @@ function insertBioData($ussd, $data, $msisdn)
         ]);
 
         $reply = "Enter Nationality";
-
-        $type = 1;      
     
     }elseif($field_count === 6){
 
@@ -938,7 +955,6 @@ function displayWelcomeText()
 {
     return $reply = "Welcome to QLAC FINANCIAL TRUST LTD \r\n 1. Register Personal Pension \r\n 2. Pay Personal Pension \r\n 3. Update Key Data \r\n 4. Enquiries";
 
-    $type = 1;
 }
 
 
