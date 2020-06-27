@@ -1,7 +1,9 @@
 <?php
 
 
-include 'ApplicationFunctions.php';
+//include 'ApplicationFunctions.php';
+
+include 'OtherFunctions.php';
 
 
 $request = $_POST; 
@@ -38,6 +40,8 @@ if($sess === 0)
     $ussd->IdentifyUser(['msisdn' => $msisdn]);   
 
     $reply = displayWelcomeText();
+
+    echo $reply;
 
     writeLog($msisdn, $sequence_ID, $sess, $data, $reply);
    
@@ -98,7 +102,7 @@ if($sess === 0)
                     
                 ]);  
 
-                $reply = "Update Key Data \r\n Enter Member ID";
+                $reply = "Update Key Data \r\n -------------- \r\n Enter Member ID";
 
                 $type = 1;            
               
@@ -201,13 +205,11 @@ if($sess === 0)
                 {
                     $ussd->updateSessionTFields([
                     
-                        'T2' => 'Entered_Member_ID',
+                        'T1' => 'Entered_Member_ID',
                     
                         'msisdn' => $msisdn
                         
                     ]); 
-
-                    //  $reply = "1. View Key Data \r\n 2. Cancel"; change later
                 
                     $reply = "Enter Amount";
       
@@ -218,8 +220,63 @@ if($sess === 0)
                 }
 
                 $type = 1;
+            
+            }elseif($transactionType == 'Update_Key_Data'){
 
-              
+               $member_id =  $ussd->findMember([
+    
+                'member_id' => $data,
+
+                'msisdn' => $msisdn,
+                    
+                ]);
+                
+                if(!empty($member_id))
+                {
+                    $ussd->updateSessionTFields([
+                    
+                        'T1' => 'Entered_Member_ID',
+                    
+                        'msisdn' => $msisdn
+                        
+                    ]); 
+
+                    $reply = "1. Update Address Information \r\n 2. Update Identity Information \r\n 3. Emergency Contact Information \r\n 4. Update Beneficiaries";
+      
+                }else{
+
+                    $reply = "Invalid Member ID! Try again ";
+
+                }
+
+                $type = 1;
+            
+            }elseif($transactionType == 'Enquiries' && $data == 1){
+
+                $ussd->updateSessionTFields([
+                    
+                    'T1' => 'Selected_Check_Mini_Statement',
+                
+                    'msisdn' => $msisdn
+                    
+                ]); 
+
+                $reply = "Press 1. to Select Scheme";
+
+                $type = 1;
+
+            }elseif($transactionType == 'Enquiries' && $data == 2){
+
+                $ussd->updateSessionTFields([
+                    
+                    'T1' => 'Selected_Info_About_Scheme',
+                
+                    'msisdn' => $msisdn
+                    
+                ]); 
+
+                $reply = "Press 1. to Select Scheme";
+
             }else{
 
                 $reply = 'Invalid Input';
@@ -307,7 +364,7 @@ if($sess === 0)
 
                 $type = 1;
       
-            }elseif($transactionType == 'Pay_Personal_Pension'){
+            }elseif($transactionType == 'Pay_Personal_Pension' && $T1 == 'Entered_Member_ID'){
 
                 //persist amount in db
 
@@ -323,6 +380,90 @@ if($sess === 0)
                
                $type = 1;
 
+            }elseif($transactionType == 'Update_Key_Data' && $data == 1){
+
+                $ussd->updateSessionTFields([
+                    
+                    'T2' => 'Selected_Update_Address_Information',
+                        
+                    'msisdn' => $msisdn
+                    
+                ]);
+                
+                $reply = addAddressInformation($ussd, $msisdn, '', $data);
+
+                $type = 1;
+
+            }elseif($transactionType == 'Update_Key_Data' && $data == 2){
+
+                $ussd->updateSessionTFields([
+                    
+                    'T2' => 'Selected_Update_Identity_Information',
+                        
+                    'msisdn' => $msisdn
+                    
+                ]);
+                
+               $reply = addIdentityInformation($ussd, $msisdn, '', $data); 
+
+                $type = 1;
+
+            }elseif($transactionType == 'Update_Key_Data' && $data == 3){
+
+                $ussd->updateSessionTFields([
+                    
+                    'T2' => 'Selected_Emergency_Contact_Information',
+                        
+                    'msisdn' => $msisdn
+                    
+                ]);
+       
+                $reply = addEmergencyContanctInformation($ussd, $msisdn, '', $data);
+
+                $type = 1;
+
+            }elseif($transactionType == 'Update_Key_Data' && $data == 4 ){
+
+                $ussd->updateSessionTFields([
+                    
+                    'T2' => 'Selected_Update_Benficiaries',
+                        
+                    'msisdn' => $msisdn
+                    
+                ]);
+
+                $reply = addBeneficiaryInfomation($ussd, $msisdn, '', $data);
+
+                $type = 1;
+                
+            }elseif($transactionType == 'Enquiries' && $T1 == 'Selected_Check_Mini_Statement'){
+
+                $ussd->updateSessionTFields([
+                    
+                    'T2' => 'Selected_Scheme',
+                        
+                    'msisdn' => $msisdn
+                    
+                ]);
+                
+                $reply = "Enter Scheme ID";
+
+                $type = 1;
+            
+
+            }elseif($transactionType == 'Enquiries' && $T1 == 'Selected_Info_About_Scheme'){
+
+                $ussd->updateSessionTFields([
+                    
+                    'T2' => 'Selected_Scheme',
+                        
+                    'msisdn' => $msisdn
+                    
+                ]);
+                
+                $reply = "View information/summary about scheme";
+
+                $type = 1;
 
             }else{
 
@@ -333,8 +474,6 @@ if($sess === 0)
                 $ussd->deleteSession(['msisdn' => $msisdn]);
 
             }
-
-
             break;
     
         case 4:
@@ -452,6 +591,31 @@ if($sess === 0)
 
                 $type= 3;
 
+            }elseif($transactionType == 'Update_Key_Data' && $T2 == 'Selected_Update_Address_Information'){
+
+                $reply = addAddressInformation($ussd, $msisdn, $T2, $data);
+
+                $type = 1;
+
+            }elseif($transactionType == 'Update_Key_Data' && $T2 == 'Selected_Update_Identity_Information'){
+
+                $reply = addIdentityInformation($ussd, $msisdn, $T2, $data); 
+
+                $type = 1;
+            
+            }elseif($transactionType == 'Update_Key_Data' && $T2 == 'Selected_Emergency_Contact_Information'){
+
+
+                $reply = addEmergencyContanctInformation($ussd, $msisdn, $T2, $data); 
+
+                $type = 1;
+
+            }elseif($transactionType == 'Update_Key_Data' && $T2 == 'Selected_Update_Benficiaries'){
+
+                $reply = addBeneficiaryInfomation($ussd, $msisdn, $T2, $data);
+
+                $type = 1;
+            
             }else{
 
                 $reply = 'Invalid Input';
@@ -526,6 +690,25 @@ if($sess === 0)
 
                 $type = 3;
 
+            
+            }elseif($transactionType == 'Update_Key_Data' &&  $T3 == 'Entered_Email'){
+
+                $reply =  addAddressInformation($ussd, $msisdn, $T3, $data);
+
+                $type = 1;
+
+            }elseif($transactionType == 'Update_Key_Data' &&  $T3 == 'Selected_Card_Type'){
+
+                $reply = addIdentityInformation($ussd, $msisdn, $T3, $data);
+
+                $type = 1;
+
+            }elseif($transactionType == 'Update_Key_Data' &&  $T3 == 'Entered_Emergency_Contant_Name'){
+
+                $reply = addEmergencyContanctInformation($ussd, $msisdn, $T3, $data);
+
+                $type = 3;
+
             }else{
 
                 $reply = 'Invalid Input';
@@ -533,7 +716,6 @@ if($sess === 0)
                 $type = 3;
 
                 $ussd->deleteSession(['msisdn' => $msisdn]);
-
 
             }
 
@@ -582,6 +764,18 @@ if($sess === 0)
 
                 $reply = insertBioData($ussd, $data, $msisdn);
                 
+                $type = 1;
+
+            }elseif($transactionType == 'Update_Key_Data' &&  $T4 == 'Entered_Residential_Address'){
+
+                $reply =  addAddressInformation($ussd, $msisdn, $T4, $data);
+
+                $type = 1;
+
+            }elseif($transactionType == 'Update_Key_Data' &&  $T4 == 'Entered_Id_No'){
+
+                $reply = addIdentityInformation($ussd, $msisdn, $T4, $data);
+
                 $type = 1;
 
             }else{
@@ -657,6 +851,27 @@ if($sess === 0)
               $reply = insertBioData($ussd, $data, $msisdn);
 
               $type = 1;
+            
+            }elseif($transactionType == 'Update_Key_Data' &&  $T5 == 'Entered_Postal_Address'){
+
+                $reply =  addAddressInformation($ussd, $msisdn, $T5, $data);
+
+                $type = 3;
+
+            }elseif($transactionType == 'Update_Key_Data' &&  $T5 == 'Entered_Occupation'){
+
+                $reply =  addIdentityInformation($ussd, $msisdn, $T5, $data);
+
+                if($reply == 'Identity Information Saved')
+                {
+                    $type = 3;
+
+                    $ussd->deleteSession(['msisdn' => $msisdn]);
+                
+                }else{
+
+                    $type = 1;
+                }
 
             }else{
 

@@ -379,5 +379,40 @@ class QueryBuilder
 
 
 
+    public function insertIBeneficiaryData($parameters)
+    {
+
+        $sql = sprintf(
+            
+            "INSERT INTO beneficiaries (%s) VALUES (%s)", implode(', ', array_keys($parameters)),  ':'.implode(', :', array_keys($parameters))
+        );
+
+
+        $this->insert($sql, $parameters);
+
+    }
+
+
+
+    public function insertOtherBeneficiaryField($parameters)
+    {
+
+        $sql = sprintf(
+            
+            "UPDATE beneficiaries SET %s  WHERE %s ", 
+            
+            implode('', [array_key_first($parameters), ' = :'.array_key_first($parameters)]), 
+            
+            implode('', [array_key_last($parameters), ' = :'.array_key_last($parameters)])
+        );
+
+
+
+        $this->insert($sql, $parameters);
+
+    }
+
+
+
 
 }
