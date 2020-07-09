@@ -118,13 +118,10 @@ class QueryBuilder
 
 
 
-
-
     public function updateTransanctionType($parameters)
     {
 
-       
-
+    
         $msisdn = $parameters['msisdn'];
 
         $field = "";
@@ -208,37 +205,7 @@ class QueryBuilder
 
 
 
-    public function insertInitialBioData($parameters)
-    {
-
-        $sql = sprintf(
-            
-            "INSERT INTO pensioners_biodata_table (%s) VALUES (%s)", implode(', ', array_keys($parameters)),  ':'.implode(', :', array_keys($parameters))
-        );
-
-
-
-        $this->insert($sql, $parameters);
-
-    }
-
-    public function insertOtherBioData($parameters)
-    {
-
-        $sql = sprintf(
-            
-            "UPDATE pensioners_biodata_table SET %s  WHERE %s ", 
-            
-            implode('', [array_key_first($parameters), ' = :'.array_key_first($parameters)]), 
-            
-            implode('', [array_key_last($parameters), ' = :'.array_key_last($parameters)])
-        );
-
-
-
-        $this->insert($sql, $parameters);
-
-    }
+ 
 
 
 
@@ -300,12 +267,12 @@ class QueryBuilder
 
 
 
-    public function getMemberID($parameters)
+    public function getStudentID($parameters)
     {
 
         $sql = sprintf(
             
-            "SELECT member_id FROM pensioners_biodata_table WHERE %s ", 
+            "SELECT student_id FROM students WHERE %s ", 
             
             implode('', [key($parameters), ' = :'.key($parameters)])
         );
@@ -319,17 +286,16 @@ class QueryBuilder
 
 
 
-    public function findMember($parameters)
+    public function verifyId($parameters)
     {
         $sql = sprintf(
             
-            "SELECT * FROM pensioners_biodata_table WHERE %s AND %s", 
+            "SELECT * FROM students WHERE %s", 
 
-            implode('', [array_key_first($parameters), ' = :'.array_key_first($parameters)]),
+            implode('', [key($parameters), ' = :'.key($parameters)]),
             
-            implode('', [array_key_last($parameters), ' = :'.array_key_last($parameters)])
-        );
 
+        );
 
 
         $results = (array)$this->select($sql, $parameters);
@@ -343,11 +309,11 @@ class QueryBuilder
 
 
 
-    public function fetchBioData($parameters)
+    public function fetchCandidates($parameters)
     {
         $sql = sprintf(
             
-            "SELECT * FROM pensioners_biodata_table WHERE %s", 
+            "SELECT * FROM candidates WHERE %s", 
 
             implode('', [array_key_first($parameters), ' = :'.array_key_first($parameters)])
         );
@@ -357,7 +323,26 @@ class QueryBuilder
         $results = $this->select($sql, $parameters);
 
 
-        return (array)$results[0];
+        return (array)$results;
+ 
+    }
+
+
+    public function getCandidates($parameters)
+    {
+        $sql = sprintf(
+            
+            "SELECT candidates.name FROM candidates INNER JOIN votes ON votes.candidates_id = candidates.id WHERE %s", 
+
+            implode('', [array_key_first($parameters), ' = :'.array_key_first($parameters)])
+        );
+
+
+
+        $results = $this->select($sql, $parameters);
+
+
+        return (array)$results;
  
     }
 
@@ -379,12 +364,12 @@ class QueryBuilder
 
 
 
-    public function insertIBeneficiaryData($parameters)
+    public function insertVotes($parameters)
     {
 
         $sql = sprintf(
             
-            "INSERT INTO beneficiaries (%s) VALUES (%s)", implode(', ', array_keys($parameters)),  ':'.implode(', :', array_keys($parameters))
+            "INSERT INTO votes (%s) VALUES (%s)", implode(', ', array_keys($parameters)),  ':'.implode(', :', array_keys($parameters))
         );
 
 

@@ -26,7 +26,7 @@ function writeLog($msisdn, $sequence_ID, $case, $request, $response)
     date_default_timezone_set('GMT');
     $time = date('Y-m-d H:i:s');
 
-    $record = $time . "|MTN|" . $msisdn . "|" . $sequence_ID . "|" . $case . "|" . $request . "|" . $response . PHP_EOL;
+    $record = $time . "|UG Votes|" . $msisdn . "|" . $sequence_ID . "|" . $case . "|" . $request . "|" . $response . PHP_EOL;
     file_put_contents('Ussd_access.log', $record, FILE_APPEND);
 }
 
@@ -52,85 +52,42 @@ if($sess === 0)
 
         case 1:
 
-            if(substr($data, 1, 5) == '899*9')
+            if(substr($data, 1, 4) == '025')
             {
 
                 $reply = displayWelcomeText(); 
                 
                 $type = 1;
         
-            }elseif($data == 1){
+            }else{
 
-                //insert transaction type == register
-               $ussd->updateTransanctionType([
-                    
-                        'transaction_type' => 'Register_Personal_Pension',
-                    
-                        'msisdn' => $msisdn
+                #verify student id
+
+                $id = $ussd->verifyId(['student_id' => $data]);
+
+                if(!empty($id))
+                {
+
+                     //insert transaction type == register
+                    $ussd->updateTransanctionType([
                         
-                    ]);   
-
-                $reply = "Register Personal Pension \r\n 1. New Member \r\n 2. Existing Tier 2 or PF Member";
-
-                $type = 1;
-            
-            }elseif($data == 2){
-
-                   //insert transaction type == pay
-
-                   $ussd->updateTransanctionType([
-                    
-                    'transaction_type' => 'Pay_Personal_Pension',
-                
-                    'msisdn' => $msisdn
-                    
-                ]);  ;   
-
-                $reply = "Pay Personal Pension \r\n Enter Member ID";
-              
-                $type = 1;
-
-            }elseif($data == 3){
-
-                //insert transaction type == update
-
-                $ussd->updateTransanctionType([
-                    
-                    'transaction_type' => 'Update_Key_Data',
-                
-                    'msisdn' => $msisdn
-                    
-                ]);  
-
-                $reply = "Update Key Data \r\n -------------- \r\n Enter Member ID";
-
-                $type = 1;            
-              
-
-            }elseif($data == 4){
-
-                //insert transaction type == Enquiries
-
-                     $ussd->updateTransanctionType([
-                    
-                        'transaction_type' => 'Enquiries',
+                        'transaction_type' => 'Entered_ID',
                     
                         'msisdn' => $msisdn
                         
                     ]);  
 
-                $reply = "Enquiries \r\n 1. Check Mini Statement \r\n 2. Info About Scheme";
-            
-                $type = 1;            
 
-            }else{
+                    $reply = getFetchedCandidate('President', $ussd);
 
-                $reply = "Invalid input";
+                
+                }else{
 
-                $type = 3;
+                    $reply = "ID not found in our records";
+                }
 
-                $ussd->deleteSession(['msisdn' => $msisdn]);
 
+                $type = 1;
 
             }
 
@@ -141,7 +98,7 @@ if($sess === 0)
 
            $transactionType = $ussd->GetTransactionType(['msisdn' => $msisdn]);
 
-            if(substr($data, 1, 5) == '899*9')
+            if(substr($data, 1, 4) == '025')
             {
 
                 /* 
@@ -165,125 +122,26 @@ if($sess === 0)
                 $type = 1;
 
     
-            }elseif($transactionType == 'Register_Personal_Pension' && $data == 1){
+            }elseif($transactionType == 'Entered_ID'){  
+                
+                if($data != 0)
+                {
+
+                    $tField = ['T1' => 'Presidential_Vote'];
+                
+                    #call function to insert vote
+    
+                    insertStudentVote($ussd, $data, $msisdn, $tField);
+
+                }
 
                  
-                # Call function to insert member_id, and prompt user to enter surname
+                # Call function to vice presidential candidates
 
-               $reply = insertBioData($ussd, $data, $msisdn);
+               $reply = getFetchedCandidate('Vice President', $ussd);
 
                $type = 1;
                 
-
-            }elseif($transactionType == 'Register_Personal_Pension' && $data == 2){
-
-                $ussd->updateSessionTFields([
-                    
-                    'T1' => 'Selected_Existing_Tier',
-                
-                    'msisdn' => $msisdn
-                    
-                ]);  
-
-                $reply = "Existing Tier 2/PF Member \r\n Enter Member ID"; //write a 
-              
-                $type = 1;
-         
-            }elseif($transactionType == 'Pay_Personal_Pension'){
-
-                //insert member id 
-
-               $member_id =  $ussd->findMember([
-    
-                'member_id' => $data,
-
-                'msisdn' => $msisdn,
-                    
-                ]);
-                
-                if(!empty($member_id))
-                {
-                    $ussd->updateSessionTFields([
-                    
-                        'T1' => 'Entered_Member_ID',
-                    
-                        'msisdn' => $msisdn
-                        
-                    ]); 
-                
-                    $reply = "Enter Amount";
-      
-                }else{
-
-                    $reply = "Invalid Member ID! Try again ";
-
-                }
-
-                $type = 1;
-            
-            }elseif($transactionType == 'Update_Key_Data'){
-
-               $member_id =  $ussd->findMember([
-    
-                'member_id' => $data,
-
-                'msisdn' => $msisdn,
-                    
-                ]);
-                
-                if(!empty($member_id))
-                {
-                    $ussd->updateSessionTFields([
-                    
-                        'T1' => 'Entered_Member_ID',
-                    
-                        'msisdn' => $msisdn
-                        
-                    ]); 
-
-                    $reply = "1. Update Address Information \r\n 2. Update Identity Information \r\n 3. Emergency Contact Information \r\n 4. Update Beneficiaries";
-      
-                }else{
-
-                    $reply = "Invalid Member ID! Try again ";
-
-                }
-
-                $type = 1;
-            
-            }elseif($transactionType == 'Enquiries' && $data == 1){
-
-                $ussd->updateSessionTFields([
-                    
-                    'T1' => 'Selected_Check_Mini_Statement',
-                
-                    'msisdn' => $msisdn
-                    
-                ]); 
-
-                $reply = "Press 1. to Select Scheme";
-
-                $type = 1;
-
-            }elseif($transactionType == 'Enquiries' && $data == 2){
-
-                $ussd->updateSessionTFields([
-                    
-                    'T1' => 'Selected_Info_About_Scheme',
-                
-                    'msisdn' => $msisdn
-                    
-                ]); 
-
-                $reply = "Press 1. to Select Scheme";
-
-            }else{
-
-                $reply = 'Invalid Input';
-
-                $type = 3;
-
-                $ussd->deleteSession(['msisdn' => $msisdn]);
 
             }
 
@@ -295,7 +153,7 @@ if($sess === 0)
 
             $T1 = $ussd->getTField(['T1','msisdn' => $msisdn]);
 
-            if(substr($data, 1, 5) == '899*9')
+            if(substr($data, 1, 5) == '025')
             {
 
                 /* 
@@ -322,157 +180,35 @@ if($sess === 0)
 
                 $type = 1;
 
-            }elseif($transactionType == 'Register_Personal_Pension' && $T1 == 'Inserted_Member_id'){
+            }elseif($transactionType == 'Entered_ID' && $T1 == 'Presidential_Vote'){
 
-
-                #call function to insert surname and display prompt
-
-              $reply = insertBioData($ussd, $data, $msisdn);
-
-              $type = 1;
-
-
-            }elseif($transactionType == 'Register_Personal_Pension' && $T1 == 'Selected_Existing_Tier'){
-
-                //insert member id 
-
-               $member_id =  $ussd->findMember([
-    
-                    'member_id' => $data,
-
-                    'msisdn' => $msisdn,
-                    
-                ]);
-                
-                if(!empty($member_id))
+                if($data != 0)
                 {
-                    $ussd->updateSessionTFields([
-                    
-                        'T2' => 'Entered_Member_ID',
-                    
-                        'msisdn' => $msisdn
-                        
-                    ]); 
 
-                    $reply = "1. View Key Data \r\n 2. Cancel";
+                    $tField = ['T2' => 'Vice_Presidential_Vote'];
                 
-                }else{
-
-                    $reply = "Invalid Member ID! Try again ";
+                    #call function to insert vote
+    
+                    insertStudentVote($ussd, $data, $msisdn, $tField);
 
                 }
-
-                $type = 1;
-      
-            }elseif($transactionType == 'Pay_Personal_Pension' && $T1 == 'Entered_Member_ID'){
-
-                //persist amount in db
-
-                $ussd->updateSessionTFields([
                     
-                    'T2' => 'Entered_Amount',
-                
-                    'msisdn' => $msisdn
-                    
-                ]); 
 
-               $reply = "Enter Mobile Money Pin";
-               
-               $type = 1;
+                # Call function to insert member_id, and prompt user to enter surname
 
-            }elseif($transactionType == 'Update_Key_Data' && $data == 1){
-
-                $ussd->updateSessionTFields([
-                    
-                    'T2' => 'Selected_Update_Address_Information',
-                        
-                    'msisdn' => $msisdn
-                    
-                ]);
-                
-                $reply = addAddressInformation($ussd, $msisdn, '', $data);
+                $reply = getFetchedCandidate('Treasurer', $ussd);
 
                 $type = 1;
 
-            }elseif($transactionType == 'Update_Key_Data' && $data == 2){
 
-                $ussd->updateSessionTFields([
-                    
-                    'T2' => 'Selected_Update_Identity_Information',
-                        
-                    'msisdn' => $msisdn
-                    
-                ]);
-                
-               $reply = addIdentityInformation($ussd, $msisdn, '', $data); 
+         
 
-                $type = 1;
-
-            }elseif($transactionType == 'Update_Key_Data' && $data == 3){
-
-                $ussd->updateSessionTFields([
-                    
-                    'T2' => 'Selected_Emergency_Contact_Information',
-                        
-                    'msisdn' => $msisdn
-                    
-                ]);
-       
-                $reply = addEmergencyContanctInformation($ussd, $msisdn, '', $data);
-
-                $type = 1;
-
-            }elseif($transactionType == 'Update_Key_Data' && $data == 4 ){
-
-                $ussd->updateSessionTFields([
-                    
-                    'T2' => 'Selected_Update_Benficiaries',
-                        
-                    'msisdn' => $msisdn
-                    
-                ]);
-
-                $reply = addBeneficiaryInfomation($ussd, $msisdn, '', $data);
-
-                $type = 1;
-                
-            }elseif($transactionType == 'Enquiries' && $T1 == 'Selected_Check_Mini_Statement'){
-
-                $ussd->updateSessionTFields([
-                    
-                    'T2' => 'Selected_Scheme',
-                        
-                    'msisdn' => $msisdn
-                    
-                ]);
-                
-                $reply = "Enter Scheme ID";
-
-                $type = 1;
-            
-
-            }elseif($transactionType == 'Enquiries' && $T1 == 'Selected_Info_About_Scheme'){
-
-                $ussd->updateSessionTFields([
-                    
-                    'T2' => 'Selected_Scheme',
-                        
-                    'msisdn' => $msisdn
-                    
-                ]);
-                
-                $reply = "View information/summary about scheme";
-
-                $type = 1;
-
-            }else{
-
-                $reply = 'Invalid Input';
+               /*  $reply = 'Invalid Input';
 
                 $type = 3;
 
                 $ussd->deleteSession(['msisdn' => $msisdn]);
-
+                    */
             }
             break;
     
@@ -483,7 +219,7 @@ if($sess === 0)
             $T2 = $ussd->getTField(['T2','msisdn' => $msisdn]);
 
 
-            if(substr($data, 1, 5) == '899*9')
+            if(substr($data, 1, 5) == '025')
             {
 
                 /* 
@@ -514,116 +250,27 @@ if($sess === 0)
                 $type = 1;
 
 
-            }elseif($transactionType == 'Register_Personal_Pension' &&  $T2 == 'Inserted_Surname'){
+            }elseif($transactionType == 'Entered_ID' &&  $T2 == 'Vice_Presidential_Vote'){
 
-                #   call function to insert firstname and display promt 
-                
-                $reply = insertBioData($ussd, $data, $msisdn);
 
-                $type = 1;
-
-            }elseif($transactionType == 'Register_Personal_Pension' &&  $T2 == 'Entered_Member_ID'){
-
-                if($data == 1)
+                if($data != 0)
                 {
 
-                    $bio_data = $ussd->fetchBioData(['msisdn' => $msisdn]);
-
-                    $info = [
-    
-                        'member_id' => $bio_data['member_id'],
-    
-    
-                        'name' =>  $bio_data['firstname'].' '.$bio_data['other_names'].' '.$bio_data['surname'],
-    
-    
-                        'dob' => $bio_data['dob'],
-    
-    
-                        'gender' => $bio_data['gender'],
-    
-    
-                        'nationality' => $bio_data['nationality']
-    
-                    ];
-
-    
-                    $ussd->updateSessionTFields([
-                        
-                        'T3' => 'Viewed_BioData',
-                    
-                        'msisdn' => $msisdn
-                        
-                    ]); 
-                    
-    
-                    $reply = sprintf("Personal Pension Details \r\n ------------------------
-                    Member ID: \t %s \r\n Name: \t %s  \r\n D.O.B: \t %s \r\n Gender: \t %s \r\n Nationality: \t %s \r\n\r\n 1. Press to Approve", $info['member_id'], $info['name'], $info['dob'], $info['gender'], $info['nationality']);
-
-                    $type = 1;
-
-                }else{
-
-                    $ussd->deleteSession(['msisdn' => $msisdn]);
-
-                    $type = 3;
-
-                    $reply = 'Ended Sesion';
-                }
+                    $tField = ['T3' => 'Treasurer_Vote'];
                 
+                    #call function to insert vote
+    
+                    insertStudentVote($ussd, $data, $msisdn, $tField);
+
+                }
+                    
+
+                # Call function to insert member_id, and prompt user to enter surname
+
+                $reply = getFetchedCandidate('Secretary', $ussd);
              
 
-            }elseif($transactionType == 'Pay_Personal_Pension' &&  $T2 == 'Inserted_Member_id'){
-
-                #process payment 
-
-                $ussd->updateSessionTFields([
-                    
-                    'T3' => 'Enter_Mobile_Money_Pin',
-                
-                    'msisdn' => $msisdn
-                    
-                ]); 
-
-                #confirm payment
-
-                $reply = "You have transferred an amount";
-
-                $type= 3;
-
-            }elseif($transactionType == 'Update_Key_Data' && $T2 == 'Selected_Update_Address_Information'){
-
-                $reply = addAddressInformation($ussd, $msisdn, $T2, $data);
-
                 $type = 1;
-
-            }elseif($transactionType == 'Update_Key_Data' && $T2 == 'Selected_Update_Identity_Information'){
-
-                $reply = addIdentityInformation($ussd, $msisdn, $T2, $data); 
-
-                $type = 1;
-            
-            }elseif($transactionType == 'Update_Key_Data' && $T2 == 'Selected_Emergency_Contact_Information'){
-
-
-                $reply = addEmergencyContanctInformation($ussd, $msisdn, $T2, $data); 
-
-                $type = 1;
-
-            }elseif($transactionType == 'Update_Key_Data' && $T2 == 'Selected_Update_Benficiaries'){
-
-                $reply = addBeneficiaryInfomation($ussd, $msisdn, $T2, $data);
-
-                $type = 1;
-            
-            }else{
-
-                $reply = 'Invalid Input';
-
-                $type = 3;
-
-                $ussd->deleteSession(['msisdn' => $msisdn]);
-
             }
 
             break;
@@ -636,7 +283,7 @@ if($sess === 0)
             $T3 = $ussd->getTField(['T3','msisdn' => $msisdn]);
 
             
-            if(substr($data, 1, 5) == '899*9')
+            if(substr($data, 1, 5) == '025')
             {
 
                 /* 
@@ -663,60 +310,29 @@ if($sess === 0)
 
                 $type = 1;          
 
-            }elseif($transactionType == 'Register_Personal_Pension' &&  $T3 == 'Inserted_Firstname'){
+            }elseif($transactionType == 'Entered_ID' &&  $T3 == 'Treasurer_Vote'){
 
 
-                # call function to insert othername and display prome
+                if($data != 0)
+                {
+
+                    $tField = ['T4' => 'Secretary_Vote'];
                 
-               $reply = insertBioData($ussd, $data, $msisdn);
+                    #call function to insert vote
+    
+                    insertStudentVote($ussd, $data, $msisdn, $tField);
 
-               $type = 1;
+                }
+                    
 
-            }elseif($transactionType == 'Register_Personal_Pension' &&  $T3 == 'Viewed_BioData'){
+                # Call function to insert member_id, and prompt user to enter surname
 
+                $reply = getFetchedCandidate('Organizer', $ussd);
+            
 
-                $ussd->approveBioData([
-        
-                    'verified_at' => Date('Y-m-d H:i:s'),
-
-                    'msisdn' => $msisdn
-
-                ]);
-
-
-                $ussd->deleteSession(['msisdn' => $msisdn]);
-
-                $reply = "Approved account Details";
-
-                $type = 3;
+                $type = 1;
 
             
-            }elseif($transactionType == 'Update_Key_Data' &&  $T3 == 'Entered_Email'){
-
-                $reply =  addAddressInformation($ussd, $msisdn, $T3, $data);
-
-                $type = 1;
-
-            }elseif($transactionType == 'Update_Key_Data' &&  $T3 == 'Selected_Card_Type'){
-
-                $reply = addIdentityInformation($ussd, $msisdn, $T3, $data);
-
-                $type = 1;
-
-            }elseif($transactionType == 'Update_Key_Data' &&  $T3 == 'Entered_Emergency_Contant_Name'){
-
-                $reply = addEmergencyContanctInformation($ussd, $msisdn, $T3, $data);
-
-                $type = 3;
-
-            }else{
-
-                $reply = 'Invalid Input';
-
-                $type = 3;
-
-                $ussd->deleteSession(['msisdn' => $msisdn]);
-
             }
 
             break;
@@ -727,7 +343,7 @@ if($sess === 0)
 
             $T4 = $ussd->getTField(['T4','msisdn' => $msisdn]);
 
-            if(substr($data, 1, 5) == '899*9')
+            if(substr($data, 1, 5) == '025')
             {
 
                 /* 
@@ -757,243 +373,38 @@ if($sess === 0)
 
                 $type = 1;
                 
-            }elseif($transactionType == 'Register_Personal_Pension' &&  $T4 == 'Inserted_Other_names'){
+            }elseif($transactionType == 'Entered_ID' &&  $T4 == 'Secretary_Vote'){
 
-
-                # call function to insert dob and display prompt
-
-                $reply = insertBioData($ussd, $data, $msisdn);
-                
-                $type = 1;
-
-            }elseif($transactionType == 'Update_Key_Data' &&  $T4 == 'Entered_Residential_Address'){
-
-                $reply =  addAddressInformation($ussd, $msisdn, $T4, $data);
-
-                $type = 1;
-
-            }elseif($transactionType == 'Update_Key_Data' &&  $T4 == 'Entered_Id_No'){
-
-                $reply = addIdentityInformation($ussd, $msisdn, $T4, $data);
-
-                $type = 1;
-
-            }else{
-
-                $reply = 'Invalid Input';
-
-                $type = 3;
-
-                $ussd->deleteSession(['msisdn' => $msisdn]);
-
-
-            }
-
-            break;
-
-        case 7:
-
-
-            $transactionType = $ussd->GetTransactionType(['msisdn' => $msisdn]);
-
-
-            $T5 = $ussd->getTField(['T5','msisdn' => $msisdn]);
-
-
-            if(substr($data, 1, 5) == '899*9')
-            {
-
-                /* 
-                *   find the msisdn and clear its transaction type 
-                *
-                *   for the proceeding request to be handled by the appropirate switch case 
-                *
-                *   return then welcome text   
-                */
-                resetbioData($ussd, $msisdn);
-
-                $ussd->updateTransanctionType([
-                    
-                    'transaction_type' => NULL,
-                    
-                    'T1' => NULL, 'T2' => NULL, 'T3' => NULL,
-                    
-                    'T4' => NULL,  'T5' => NULL,
-                
-                    'msisdn' => $msisdn
-                    
-                ]);
-
-
-                /* 
-                *     if transaction type == Register Personal Pension 
-                *      
-                *     clear incomplete biodata for this session
-                *
-                *     restart the flow   
-                */
-
-                if($transactionType == 'Register_Personal_Pension')
+               
+                if($data != 0)
                 {
 
-                    $ussd->clearIncompleteSessionBioData(['msisdn' => $msisdn]);
-                }
-               
-                $reply = displayWelcomeText();
-
-                $type = 1;
-
-
-            }elseif($transactionType == 'Register_Personal_Pension' &&  $T5 == 'Inserted_dob'){
-               
-                # call function to insert gender and display prompt
-
-              $reply = insertBioData($ussd, $data, $msisdn);
-
-              $type = 1;
-            
-            }elseif($transactionType == 'Update_Key_Data' &&  $T5 == 'Entered_Postal_Address'){
-
-                $reply =  addAddressInformation($ussd, $msisdn, $T5, $data);
-
-                $type = 3;
-
-            }elseif($transactionType == 'Update_Key_Data' &&  $T5 == 'Entered_Occupation'){
-
-                $reply =  addIdentityInformation($ussd, $msisdn, $T5, $data);
-
-                if($reply == 'Identity Information Saved')
-                {
-                    $type = 3;
-
-                    $ussd->deleteSession(['msisdn' => $msisdn]);
+                    $tField = ['T5' => 'Organizer_Vote'];
+                    
                 
-                }else{
+                    #call function to insert vote
+    
+                    insertStudentVote($ussd, $data, $msisdn, $tField);
 
-                    $type = 1;
                 }
 
-            }else{
-
-                $reply = 'Invalid Input';
-
-                $type = 3;
-
-                $ussd->deleteSession(['msisdn' => $msisdn]);
-
-            }
-
-            break;
-
-        case 8;
+                $student_id = $ussd->getStudentId(['phone' => $msisdn]);
 
 
-            $transactionType = $ussd->GetTransactionType(['msisdn' => $msisdn]);
+
+               $candidates_voted_for = $ussd->getCandidates(['student_id' => $student_id]);
 
 
-            $T6 = $ussd->getTField(['T6','msisdn' => $msisdn]);
-
-
-            if(substr($data, 1, 5) == '899*9')
-            {
-
-                /* 
-                *   find the msisdn and clear its transaction type 
-                *
-                *   for the proceeding request to be handled by the appropirate switch case 
-                *
-                *   return then welcome text   
-                */
-                resetbioData($ussd, $msisdn);
-
-
-                $ussd->updateTransanctionType([
+               die($candidates_voted_for);
                     
-                    'transaction_type' => NULL,
 
+                # Call function to insert member_id, and prompt user to enter surname
 
-                    'T1' => NULL, 'T2' => NULL, 'T3' => NULL, 
-                    
-                    'T4' => NULL, 'T5' => NULL, 'T6' => NULL, 
-
-                    'msisdn' => $msisdn
-                    
-                ]);
-               
-                $reply = displayWelcomeText(); 
-
-                $type = 1;
+                $reply = "YOUR VOTES --------------- \r\n";
                 
-            }elseif($transactionType == 'Register_Personal_Pension' &&  $T6 == 'Inserted_Gender'){
-
-                # call function to insert dob and display prompt
-
-               $reply = insertBioData($ussd, $data, $msisdn);
-
-               $type = 1;
-
-            
-            }else{
-
-                $reply = 'Invalid Input';
-
-                $type = 3;
-
-                $ussd->deleteSession(['msisdn' => $msisdn]);
-
-            }
-
-            break;
-        case 9;
-
-
-            $transactionType = $ussd->GetTransactionType(['msisdn' => $msisdn]);
-
-
-            $T7 = $ussd->getTField(['T7','msisdn' => $msisdn]);
-
-
-            if(substr($data, 1, 5) == '899*9')
-            {
-
-                /* 
-                *   find the msisdn and clear its transaction type 
-                *
-                *   for the proceeding request to be handled by the appropirate switch case 
-                *
-                *   return then welcome text   
-                */
-
-                resetbioData($ussd, $msisdn);
-
-                $ussd->updateTransanctionType([
-                    
-                    'transaction_type' => NULL,
-
-                    'T1' => NULL, 'T2' => NULL, 'T3' => NULL, 
-                    
-                    'T4' => NULL, 'T5' => NULL, 'T6' => NULL, 
-                    
-                    'T7' => NULL, 
-                                
-                    'msisdn' => $msisdn
-                    
-                ]);
-
-                $reply = displayWelcomeText();
-
                 $type = 1;
 
-
-            }   /* elseif($transactionType == 'Register_Personal_Pension' &&  $T7 == 'Inserted_Nationality'){
-
-                # call function to insert dob and display prompt
-
-                $reply = insertBioData($ussd, $data, $msisdn);
-
             }
-            */
-
 
             break;
         
@@ -1004,7 +415,7 @@ if($sess === 0)
             $type = 3;
 
             $ussd->deleteSession(['msisdn' => $msisdn]);
-           // $ussd->deleteService($msisdn);
+            // $ussd->deleteService($msisdn);
 
             break;
 
@@ -1016,159 +427,88 @@ if($sess === 0)
 }
 
 
-function insertBioData($ussd, $data, $msisdn)
+function getFetchedCandidate($candidate_type, $ussd)
 {
+    $candidate_results = $ussd->fetchCandidates(['candidate_type' => $candidate_type]);
 
-    # get the sum of inserted fields on bio data table for rhis session 
 
-   $field_count = $ussd->selectBioDataCount(['msisdn' => $msisdn]);  
+    $text = array_map(function($aspirants){
 
-    if($field_count === 0)
+        return $aspirants->id. '. '. $aspirants->name. "\r\n";
+    },  $candidate_results);
+
+    
+    if($candidate_type == 'President')
     {
-
-        $ussd->insertInitialBioData([
-
-            'member_id' => substr(sha1(time()), 0, 5),
-
-            'msisdn' => $msisdn
-
-        ]);
-        
-
-        $ussd->updateSessionTFields([
-                    
-            'T1' => 'Inserted_Member_id',
-                
-            'msisdn' => $msisdn
-            
-        ]);
-
-
-        $reply = "Enter Surname";
+        $reply = "PRESIDENTIAL \r\n ------------- \r\n". implode("\r\n", $text);
     
-    }elseif($field_count === 1){
+    }elseif($candidate_type == 'Vice President'){
+
+        $reply = "VICE PRESIDENT \r\n ------------- \r\n". implode("\r\n", $text);   
+
+     
+    }elseif($candidate_type == 'Treasurer'){
+
+        $reply = "TREASURER \r\n ------------- \r\n". implode("\r\n", $text);  
+
         
-        $ussd->insertOtherBioData(['surname' => $data, 'msisdn' => $msisdn]);
+    }elseif($candidate_type == 'Secretary'){
 
-        $ussd->updateSessionTFields([
-                    
-            'T2' => 'Inserted_Surname',
-                
-            'msisdn' => $msisdn
+        $reply = "SECRETARY \r\n ------------- \r\n". implode("\r\n", $text);  
+
             
-        ]);
-        
+    }elseif($candidate_type == 'Organizer'){
 
-        $reply = "Enter first name";
-    
-    }elseif($field_count === 2){
-
-
-        $ussd->insertOtherBioData(['firstname' => $data,  'msisdn' => $msisdn]);
-
-        $ussd->updateSessionTFields([
-                    
-            'T3' => 'Inserted_Firstname',
-                
-            'msisdn' => $msisdn
-            
-        ]);
-
-        $reply = "Enter Other names Or press 1. to skip";
-    
-    }elseif($field_count === 3){
-
-
-        $ussd->insertOtherBioData([
-
-            'other_names' => $data == 1 ? '' : $data,
-
-            'msisdn' => $msisdn
-
-        ]);
-
-
-        $ussd->updateSessionTFields([
-                    
-            'T4' => 'Inserted_Other_names',
-                
-            'msisdn' => $msisdn
-            
-        ]);
-
-        $reply = "Enter Date of Birth (YYYY-MM-DD)";
-
-    }elseif($field_count === 4){
-
-        $ussd->insertOtherBioData(['dob' => date_format(date_create($data), "Y-m-d"), 'msisdn' => $msisdn]);
-
-        $ussd->updateSessionTFields([
-                    
-            'T5' => 'Inserted_dob',
-                
-            'msisdn' => $msisdn
-            
-        ]);
-
-        $reply = "Select Gender \r\n 1. Male \r\n 2. Female";
-
-
-    }elseif($field_count === 5){
-
-        if($data == 1)
-        {
-
-            $ussd->insertOtherBioData(['gender' => 'Male', 'msisdn' => $msisdn]);
-
-        }elseif($data == 2){
-
-            $ussd->insertOtherBioData(['gender' => 'Female', 'msisdn' => $msisdn]);
-
-        }
-
-        $ussd->updateSessionTFields([
-                    
-            'T6' => 'Inserted_Gender',
-                
-            'msisdn' => $msisdn
-            
-        ]);
-
-        $reply = "Enter Nationality";
-    
-    }elseif($field_count === 6){
-
-
-        $ussd->insertOtherBioData(['nationality' => $data, 'msisdn' => $msisdn]);
-
-            /*      $ussd->updateSessionTFields([
-                                
-                        'T7' => 'Inserted_Nationality',
-                            
-                        'msisdn' => $msisdn
-                        
-                    ]);
-            */
-        $member_id = $ussd->getMemberID(['msisdn' => $msisdn]);
-
-        $ussd->deleteSession(['msisdn' => $msisdn]);
-
-        $reply = "Congratulations, You've registered with QLAC FINANCIAL TRUST LTD \r\n Your Member ID: {$member_id}";
-
-        $type = 3;
-        
+        $reply = "ORGANIZER \r\n ------------- \r\n". implode("\r\n", $text);  
     }
 
 
-    return $reply;
+
+    return $reply."\r\n 0. Skip";
+}
+
+
+
+
+
+function insertStudentVote($ussd, $data, $msisdn, $tField)
+{
+
+    #get the student id for session
+
+    $student_id = $ussd->getStudentId(['phone' => $msisdn]);
+
+
+    #insert student id and candidates id into votes table
+
+    $ussd->insertVotes([
+
+        'student_id' => $student_id,
+
+        'candidate_id' => $data
+
+    ]);
+
+
+    $ussd->updateSessionTFields([
+                    
+        key($tField) => $tField[key($tField)],
+            
+        'msisdn' => $msisdn
+        
+    ]);
+
 
 }
 
 
 
+
+
+
 function displayWelcomeText()
 {
-    return $reply = "Welcome to QLAC FINANCIAL TRUST LTD \r\n 1. Register Personal Pension \r\n 2. Pay Personal Pension \r\n 3. Update Key Data \r\n 4. Enquiries";
+    return $reply = "Welcome to UG Votes \r\n Input ID";
 
 }
 
