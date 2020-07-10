@@ -209,7 +209,7 @@ class QueryBuilder
 
         $sql = sprintf(
             
-            "DELETE FROM votes WHERE %s AND %s", 
+            "DELETE FROM votes WHERE %s", 
 
             implode('', [key($parameters), ' = :'.key($parameters)]));
         
@@ -373,11 +373,15 @@ class QueryBuilder
     public function updateVotes($parameters)
     {
 
+/*         die(var_dump($parameters)); */
+
         $sql = sprintf(
             
             "UPDATE votes SET %s  WHERE %s AND %s", 
             
-            implode('', [array_key_first($parameters), ' = :'.array_key_first($parameters)]), 
+            implode('', [array_key_first($parameters), ' = :'.array_key_first($parameters)]),
+            
+            'student_id = :student_id', 
             
             implode('', [array_key_last($parameters), ' = :'.array_key_last($parameters)])
         );
