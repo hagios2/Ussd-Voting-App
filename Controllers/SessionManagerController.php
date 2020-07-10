@@ -1,11 +1,6 @@
 <?php
 
 
-//include 'ApplicationFunctions.php';
-
-include 'OtherFunctions.php';
-
-
 $request = $_POST; 
 
 $msisdn = $request['msisdn'];
@@ -77,17 +72,37 @@ if($sess === 0)
                         
                     ]);  
 
+                    
+                    #check if student has already voted
+                   $voted = $ussd->getVotedStudent(['student_id' => $data]);
 
-                    $reply = getFetchedCandidate('President', $ussd);
+                   if(!empty($voted))
+                   {
+                       $reply = 'You have already voted!';
+
+
+                       $ussd->deleteSession(['msisdn' => $msisdn]);
+
+                       $type = 3;
+                   
+                    }else{
+
+                        #display presidential candidates
+
+                        $reply = getFetchedCandidate('President', $ussd);
+
+                        $type = 1;
+
+                    }
 
                 
                 }else{
 
-                    $reply = "ID not found in our records";
+                    $reply = "ID not found in our records. Try Again";
+
+                    $type = 1;
+
                 }
-
-
-                $type = 1;
 
             }
 
@@ -127,18 +142,49 @@ if($sess === 0)
                 if($data != 0)
                 {
 
-                    $tField = ['T1' => 'Presidential_Vote'];
-                
-                    #call function to insert vote
-    
-                    insertStudentVote($ussd, $data, $msisdn, $tField);
+                    $candidate = $ussd->findCandidate([
 
+                        'id' => $data,
+
+                        'candidate_type' => 'President'
+                    ]);
+
+                    if(!empty($candidate))
+                    { # for valid input 
+
+                        $tField = ['T1' => 'Presidential_Vote'];
+                
+                        #call function to insert vote
+        
+                        insertStudentVote($ussd, $data, $msisdn, $tField);
+    
+                        # display vice presidential candidates
+    
+                        $reply = getFetchedCandidate('Vice President', $ussd);
+                    
+                    }else{
+
+                        #for invalid input
+
+                        $reply = getFetchedCandidate('President', $ussd);
+
+
+                        $reply = "Invalid Input \r\n\r\n". $reply;
+
+                    }
+
+                   
+                }else{
+
+                    $tField = ['T1' => 'Skipped_Presidential_Vote'];
+
+                    skipVote($ussd, $msisdn, $tField);
+                    
+                    # Call function to fetch vice presidential candidates
+
+                    $reply = getFetchedCandidate('Vice President', $ussd);
                 }
 
-                 
-                # Call function to vice presidential candidates
-
-               $reply = getFetchedCandidate('Vice President', $ussd);
 
                $type = 1;
                 
@@ -156,15 +202,7 @@ if($sess === 0)
             if(substr($data, 1, 5) == '025')
             {
 
-                /* 
-                *   find the msisdn and clear its transaction type 
-                *
-                *   for the proceeding request to be handled by the appropirate switch case 
-                *
-                *   return then welcome text   
-                */
-
-                resetbioData($ussd, $msisdn); #reset bio data if something has been inseted for this sesion
+                resetSessionVotes($ussd, $msisdn); #reset bio data if something has been inseted for this sesion
 
 
                 $ussd->updateTransanctionType([
@@ -180,36 +218,58 @@ if($sess === 0)
 
                 $type = 1;
 
-            }elseif($transactionType == 'Entered_ID' && $T1 == 'Presidential_Vote'){
+            }elseif($transactionType == 'Entered_ID' && ($T1 == 'Presidential_Vote' || 'Skipped_Presidential_Vote')){
 
                 if($data != 0)
                 {
 
-                    $tField = ['T2' => 'Vice_Presidential_Vote'];
+                    $candidate = $ussd->findCandidate([
+
+                        'id' => $data,
+
+                        'candidate_type' => 'Vice President'
+                    ]);
+
+                    if(!empty($candidate))
+                    {
+                       
+                        $tField = ['T2' => 'Vice_Presidential_Vote'];
                 
-                    #call function to insert vote
+                        #call function to insert vote
+        
+                        insertStudentVote($ussd, $data, $msisdn, $tField);
     
-                    insertStudentVote($ussd, $data, $msisdn, $tField);
+                        # Call function to treasurer
+    
+                        $reply = getFetchedCandidate('Treasurer', $ussd);
+                    
+                    }else{
+
+
+                        $reply = getFetchedCandidate('Vice President', $ussd);
+
+                        $reply = "Invalid Input \r\n\r\n". $reply;
+
+                    }
+                
+            
+
+                }else{
+
+                    $tField = ['T2' => 'Skipped_Vice_Presidential_Vote'];
+
+                    skipVote($ussd, $msisdn, $tField);
+
+                    # Call function to fetch candidates prompt user 
+
+                    $reply = getFetchedCandidate('Treasurer', $ussd);
 
                 }
-                    
-
-                # Call function to insert member_id, and prompt user to enter surname
-
-                $reply = getFetchedCandidate('Treasurer', $ussd);
 
                 $type = 1;
 
-
-         
-
-               /*  $reply = 'Invalid Input';
-
-                $type = 3;
-
-                $ussd->deleteSession(['msisdn' => $msisdn]);
-                    */
             }
+
             break;
     
         case 4:
@@ -231,7 +291,7 @@ if($sess === 0)
                 */
 
 
-                resetbioData($ussd, $msisdn);
+                resetSessionVotes($ussd, $msisdn);
 
                 $ussd->updateTransanctionType([
                     
@@ -250,25 +310,57 @@ if($sess === 0)
                 $type = 1;
 
 
-            }elseif($transactionType == 'Entered_ID' &&  $T2 == 'Vice_Presidential_Vote'){
+            }elseif($transactionType == 'Entered_ID' && ($T2 == 'Vice_Presidential_Vote' || 'Skipped_Vice_Presidential_Vote')){
 
 
                 if($data != 0)
                 {
 
-                    $tField = ['T3' => 'Treasurer_Vote'];
+                    $candidate = $ussd->findCandidate([
+
+                        'id' => $data,
+
+                        'candidate_type' => 'Treasurer'
+                    ]);
+
+                    if(!empty($candidate))
+                    {
+                       
+                        $tField = ['T3' => 'Treasurer_Vote'];
                 
-                    #call function to insert vote
+                        #call function to insert vote
+        
+                        insertStudentVote($ussd, $data, $msisdn, $tField);
+
+                        # display Secretary candidates
     
-                    insertStudentVote($ussd, $data, $msisdn, $tField);
+                        $reply = getFetchedCandidate('Secretary', $ussd);
+                    
+                    }else{
+
+
+                        $reply = getFetchedCandidate('Treasurer', $ussd);
+
+
+
+                        $reply = "Invalid Input \r\n\r\n". $reply;
+
+                    }
+                
+            
+
+                }else{
+
+                    $tField = ['T3' => 'Skipped_Treasurer_Vote'];
+
+
+                    skipVote($ussd, $msisdn, $tField);
+
+                    # Call function to fetch candidates to prompt user 
+
+                    $reply = getFetchedCandidate('Secretary', $ussd);
 
                 }
-                    
-
-                # Call function to insert member_id, and prompt user to enter surname
-
-                $reply = getFetchedCandidate('Secretary', $ussd);
-             
 
                 $type = 1;
             }
@@ -286,15 +378,7 @@ if($sess === 0)
             if(substr($data, 1, 5) == '025')
             {
 
-                /* 
-                *   find the msisdn and clear its transaction type 
-                *
-                *   for the proceeding request to be handled by the appropirate switch case 
-                *
-                *   return the welcome text   
-                */
-
-                resetbioData($ussd, $msisdn);
+                resetSessionVotes($ussd, $msisdn);
 
                 $ussd->updateTransanctionType([
                     
@@ -310,28 +394,57 @@ if($sess === 0)
 
                 $type = 1;          
 
-            }elseif($transactionType == 'Entered_ID' &&  $T3 == 'Treasurer_Vote'){
+            }elseif($transactionType == 'Entered_ID' &&  ($T3 == 'Treasurer_Vote' || $T3 == 'Skipped_Treasurer_Vote')){
 
 
                 if($data != 0)
                 {
 
-                    $tField = ['T4' => 'Secretary_Vote'];
+                    $candidate = $ussd->findCandidate([
+
+                        'id' => $data,
+
+                        'candidate_type' => 'Secretary'
+                    ]);
+
+                    if(!empty($candidate))
+                    {
+                       
+                        $tField = ['T4' => 'Secretary_Vote'];
                 
-                    #call function to insert vote
+                        #call function to insert vote
+        
+                        insertStudentVote($ussd, $data, $msisdn, $tField);
+
+                        # Call function to Organizer
     
-                    insertStudentVote($ussd, $data, $msisdn, $tField);
-
-                }
+                        $reply = getFetchedCandidate('Organizer', $ussd);
                     
+                    }else{
 
-                # Call function to insert member_id, and prompt user to enter surname
 
-                $reply = getFetchedCandidate('Organizer', $ussd);
-            
+                        $reply = getFetchedCandidate('Secretary', $ussd);
+
+
+                        $reply = "Invalid Input \r\n\r\n". $reply;
+
+                    }
+
+                }else{
+
+                    $tField = ['T4' => 'Skipped_Secretary_Vote'];
+
+
+                    skipVote($ussd, $msisdn, $tField);
+
+                    # Call function to fetch candidates prompt user 
+
+
+                    $reply = getFetchedCandidate('Organizer', $ussd);
+                }
+
 
                 $type = 1;
-
             
             }
 
@@ -345,16 +458,9 @@ if($sess === 0)
 
             if(substr($data, 1, 5) == '025')
             {
+                #reset the session
 
-                /* 
-                *   find the msisdn and clear its transaction type 
-                *
-                *   for the proceeding request to be handled by the appropirate switch case 
-                *
-                *   return then welcome text   
-                */
-
-                resetbioData($ussd, $msisdn);
+                resetSessionVotes($ussd, $msisdn);
 
 
                 $ussd->updateTransanctionType([
@@ -373,51 +479,511 @@ if($sess === 0)
 
                 $type = 1;
                 
-            }elseif($transactionType == 'Entered_ID' &&  $T4 == 'Secretary_Vote'){
+            }elseif($transactionType == 'Entered_ID' &&  ($T4 == 'Secretary_Vote' || $T4 == 'Skipped_Secretary_Vote')){
 
-               
                 if($data != 0)
                 {
 
-                    $tField = ['T5' => 'Organizer_Vote'];
-                    
-                
-                    #call function to insert vote
-    
-                    insertStudentVote($ussd, $data, $msisdn, $tField);
+                    $candidate = $ussd->findCandidate([
 
+                        'id' => $data,
+
+                        'candidate_type' => 'Organizer'
+                    ]);
+
+                    if(!empty($candidate))
+                    {
+                       
+                        $tField = ['T5' => 'Organizer_Vote'];
+                    
+                        #call function to insert vote
+        
+                        insertStudentVote($ussd, $data, $msisdn, $tField);
+
+
+                        #display confirm votes
+                        $reply = confirmSessionVotes($msisdn, $ussd);
+                    
+                    }else{
+
+
+                        $reply = getFetchedCandidate('Organizer', $ussd);
+
+
+                        $reply = "Invalid Input \r\n\r\n". $reply;
+
+                    }
+                
+            
+
+                }else{
+
+
+                    $tField = ['T5' => 'Skipped_Organizer_Vote'];
+
+                    skipVote($ussd, $msisdn, $tField);
+
+                    # Call function to fetch candidates prompt user 
+
+
+                    $reply = confirmSessionVotes($msisdn, $ussd);
                 }
-
-                $student_id = $ussd->getStudentId(['phone' => $msisdn]);
-
-
-
-               $candidates_voted_for = $ussd->getCandidates(['student_id' => $student_id]);
-
-
-               die($candidates_voted_for);
-                    
-
-                # Call function to insert member_id, and prompt user to enter surname
-
-                $reply = "YOUR VOTES --------------- \r\n";
-                
-                $type = 1;
 
             }
 
             break;
         
+        case 7:
+
+            $transactionType = $ussd->GetTransactionType(['msisdn' => $msisdn]);
+
+            $T5 = $ussd->getTField(['T5','msisdn' => $msisdn]);
+
+            if(substr($data, 1, 5) == '025')
+            {
+
+                resetSessionVotes($ussd, $msisdn);
+
+
+                $ussd->updateTransanctionType([
+                    
+                    'transaction_type' => NULL, 
+                    
+                    'T1' => NULL, 'T2' => NULL,
+                    
+                    'T3' => NULL, 'T4' => NULL, 'T5' => NULL,
+                
+                    'msisdn' => $msisdn
+                    
+                ]);
+
+                $reply = displayWelcomeText(); 
+
+                $type = 1;
+                
+            }elseif($transactionType == 'Entered_ID' &&  ($T5 == 'Organizer_Vote' || $T5 == 'Skipped_Organizer_Vote' )){
+
+                if($data == 1)
+                {
+                    $student_id = $ussd->getStudentId(['phone' => $msisdn]);
+
+
+                    $ussd->confirmVote([
+                        
+                        'student_id' => $student_id, 
+
+                        'voted' => true
+                
+                    ]);
+
+                    $ussd->deleteSession(['msisdn' => $msisdn]);
+
+
+                    $reply = 'Voting completed';
+
+                    $type = 3;
+
+                }elseif($data == 2){
+
+                    $ussd->updateSessionTFields([
+                    
+                        'T6' => 'Make_Changes',
+                            
+                        'msisdn' => $msisdn
+                        
+                    ]);
+
+
+                    $reply = displayPortfolio();
+
+                    $type = 1;
+
+                }else{
+
+                    $reply = 'Invalid Input! Try again';
+
+                    $type = 3;
+                }
+
+            }
+
+        break;
+
+        case 8:
+
+
+            $transactionType = $ussd->GetTransactionType(['msisdn' => $msisdn]);
+
+            $T6 = $ussd->getTField(['T6','msisdn' => $msisdn]);
+
+            if(substr($data, 1, 4) == '025')
+            {
+
+                resetSessionVotes($ussd, $msisdn);
+
+
+                $ussd->updateTransanctionType([
+                    
+                    'transaction_type' => NULL, 
+                    
+                    'T1' => NULL, 'T2' => NULL,
+                    
+                    'T3' => NULL, 'T4' => NULL, 
+                    
+                    'T5' => NULL, 'T6' => NULL,
+                
+                    'msisdn' => $msisdn
+                    
+                ]);
+
+                $reply = displayWelcomeText(); 
+
+                $type = 1;
+
+            }elseif($transactionType == 'Entered_ID' && $T6 == 'Make_Changes'){
+
+                switch($data)
+                {
+                    case 1:
+
+                        $ussd->updateSessionTFields([
+                    
+                            'T7' => 'Update_President',
+                                
+                            'msisdn' => $msisdn
+                            
+                        ]);
+
+                        $reply = getFetchedCandidate('President', $ussd);
+
+                        $type = 1;
+
+                    break;
+
+                    case 2:
+
+                        $ussd->updateSessionTFields([
+                    
+                            'T7' => 'Update_Vice_President',
+                                
+                            'msisdn' => $msisdn
+                            
+                        ]);
+
+                        $reply = getFetchedCandidate('Vice President', $ussd);
+
+                        $type = 1;
+
+                    break;
+
+                    case 3: 
+
+                        $ussd->updateSessionTFields([
+                    
+                            'T7' => 'Update_Treasurer',
+                                
+                            'msisdn' => $msisdn
+                            
+                        ]);
+
+                        $reply = getFetchedCandidate('Treasurer', $ussd);
+
+                        $type = 1;
+
+                    break;
+
+                    case 4:
+
+                        $ussd->updateSessionTFields([
+                    
+                            'T7' => 'Update_Secretary',
+                                
+                            'msisdn' => $msisdn
+                            
+                        ]);
+
+                        $reply = getFetchedCandidate('Secretary', $ussd);
+
+                        $type = 1;
+
+                    break;
+
+                    case 5:
+
+                        $ussd->updateSessionTFields([
+                    
+                            'T7' => 'Update_Organizer',
+                                
+                            'msisdn' => $msisdn
+                            
+                        ]);
+
+                        $reply = getFetchedCandidate('Organizer', $ussd);
+
+                        $type = 1;
+
+                    break;
+
+                    default:
+
+                        $reply = "Invalid input \r\n\r\n" . displayPortfolio();
+
+                        $type = 1;
+            
+
+                    break;
+                
+                }
+
+            }
+
+
+        case 9:
+
+
+            $transactionType = $ussd->GetTransactionType(['msisdn' => $msisdn]);
+
+            $T7 = $ussd->getTField(['T7','msisdn' => $msisdn]);
+
+            if(substr($data, 1, 4) == '025')
+            {
+
+                resetSessionVotes($ussd, $msisdn);
+
+
+                $ussd->updateTransanctionType([
+                    
+                    'transaction_type' => NULL, 
+                    
+                    'T1' => NULL, 'T2' => NULL,
+                    
+                    'T3' => NULL, 'T4' => NULL, 
+                    
+                    'T5' => NULL, 'T6' => NULL,
+
+                    'T7' => NULL,
+                
+                    'msisdn' => $msisdn
+                    
+                ]);
+
+                $reply = displayWelcomeText(); 
+
+                $type = 1;
+
+            }elseif($transactionType == 'Entered_ID' && $T7 == 'Updated_President'){
+
+                $candidate = $ussd->findCandidate([
+
+                    'id' => $data,
+
+                    'candidate_type' => 'President'
+                ]);
+
+                if(!empty($candidate))
+                {
+                    $ussd->updateVotes([
+
+                        'candidate_id' => $data,
+
+                        'student_id' => $student_id,
+
+                        'vote_type' => 'Presidential_Vote'
+                    ]);
+
+                    $ussd->updateTransanctionType([
+                        
+                        'T6' => NULL, 'T7' => NULL,
+                    
+                        'msisdn' => $msisdn
+                        
+                    ]);
+
+                    $reply = confirmSessionVotes($msisdn, $ussd);
+
+                }else{
+
+                    $reply = getFetchedCandidate('President', $ussd);
+
+                    $reply = "Invalid Input \r\n\r\n". $reply;
+                }
+
+            }elseif($transactionType == 'Entered_ID' && $T7 == 'Update_Vice_President'){
+
+                $candidate = $ussd->findCandidate([
+
+                    'id' => $data,
+
+                    'candidate_type' => 'Vice President'
+                ]);
+
+                if(!empty($candidate))
+                {
+                    $ussd->updateVotes([
+        
+                        'candidate_id' => $data,
+
+                        'student_id' => $student_id,
+    
+                        'vote_type' => 'Vice_Presidential_Vote'
+    
+                    ]);
+
+                    $ussd->updateTransanctionType([
+                        
+                        'T6' => NULL, 'T7' => NULL,
+                    
+                        'msisdn' => $msisdn
+                        
+                    ]);
+
+                    $reply = confirmSessionVotes($msisdn, $ussd);
+
+                }else{
+
+                    $reply = getFetchedCandidate('Vice President', $ussd);
+
+                    $reply = "Invalid Input \r\n\r\n". $reply;
+                }
+
+                $type = 1;
+                
+            }elseif($transactionType == 'Entered_ID' && $T7 == 'Update_Treasurer'){
+
+                $candidate = $ussd->findCandidate([
+
+                    'id' => $data,
+
+                    'candidate_type' => 'Treasurer'
+                ]);
+
+                if(!empty($candidate))
+                {
+                    $ussd->updateVotes([
+        
+                        'candidate_id' => $data,
+
+                        'student_id' => $student_id,
+    
+                        'vote_type' => 'Treasurer_Vote'
+    
+                    ]);
+
+                    $ussd->updateTransanctionType([
+                        
+                        'T6' => NULL, 'T7' => NULL,
+                    
+                        'msisdn' => $msisdn
+                        
+                    ]);
+
+                    $reply = confirmSessionVotes($msisdn, $ussd);
+
+                }else{
+
+                    $reply = getFetchedCandidate('Treasurer', $ussd);
+
+                    $reply = "Invalid Input \r\n\r\n". $reply;
+                }
+
+                $type = 1;
+
+            }elseif($transactionType == 'Entered_ID' && $T7 == 'Update_Secretary'){
+
+
+                $candidate = $ussd->findCandidate([
+
+                    'id' => $data,
+
+                    'candidate_type' => 'Secretary'
+                ]);
+
+                if(!empty($candidate))
+                {
+                    $ussd->updateVotes([
+        
+                        'candidate_id' => $data,
+
+                        'student_id' => $student_id,
+    
+                        'vote_type' => 'Secretary_Vote'
+    
+                    ]);
+
+                    $ussd->updateTransanctionType([
+                        
+                        'T6' => NULL, 'T7' => NULL,
+                    
+                        'msisdn' => $msisdn
+                        
+                    ]);
+
+                    $reply = confirmSessionVotes($msisdn, $ussd);
+
+                }else{
+
+                    $reply = getFetchedCandidate('Secretary', $ussd);
+
+                    $reply = "Invalid Input \r\n\r\n". $reply;
+                }
+
+                $type = 1;
+
+                    
+            }elseif($transactionType == 'Entered_ID' && $T7 == 'Update_Organizer'){
+
+
+                $candidate = $ussd->findCandidate([
+
+                    'id' => $data,
+
+                    'candidate_type' => 'Organizer'
+                ]);
+
+                if(!empty($candidate))
+                {
+                    $ussd->updateVotes([
+        
+                        'candidate_id' => $data,
+
+                        'student_id' => $student_id,
+    
+                        'vote_type' => 'Organizer_Vote'
+    
+                    ]);
+
+                    $ussd->updateTransanctionType([
+                        
+                        'T6' => NULL, 'T7' => NULL,
+                    
+                        'msisdn' => $msisdn
+                        
+                    ]);
+
+                    $reply = confirmSessionVotes($msisdn, $ussd);
+
+                }else{
+
+                    $reply = getFetchedCandidate('Secretary', $ussd);
+
+                    $reply = "Invalid Input \r\n\r\n". $reply;
+                }
+
+                $type = 1;
+            
+            }
+
+        break;
+
         default :
 
-            $reply = "Invalid option. Kindly dial *899*100# to continue or contact the provider for assistance";
+            $reply = "Invalid option. Kindly dial *025# to continue or contact the provider for assistance";
 
             $type = 3;
 
             $ussd->deleteSession(['msisdn' => $msisdn]);
-            // $ussd->deleteService($msisdn);
 
-            break;
+        break;
 
     }
 
@@ -425,6 +991,7 @@ if($sess === 0)
 
     writeLog($msisdn, $sequence_ID, $sess, $data, $reply);
 }
+
 
 
 function getFetchedCandidate($candidate_type, $ussd)
@@ -469,9 +1036,7 @@ function getFetchedCandidate($candidate_type, $ussd)
 
 
 
-
-
-function insertStudentVote($ussd, $data, $msisdn, $tField)
+function insertStudentVote($ussd, $data,  $msisdn, $tField)
 {
 
     #get the student id for session
@@ -479,13 +1044,15 @@ function insertStudentVote($ussd, $data, $msisdn, $tField)
     $student_id = $ussd->getStudentId(['phone' => $msisdn]);
 
 
-    #insert student id and candidates id into votes table
+    #insert student id, candidates id and vote type into votes table
 
     $ussd->insertVotes([
 
         'student_id' => $student_id,
 
-        'candidate_id' => $data
+        'candidate_id' => $data,
+
+        'vote_type' => $tField[key($tField)]
 
     ]);
 
@@ -503,9 +1070,6 @@ function insertStudentVote($ussd, $data, $msisdn, $tField)
 
 
 
-
-
-
 function displayWelcomeText()
 {
     return $reply = "Welcome to UG Votes \r\n Input ID";
@@ -514,12 +1078,12 @@ function displayWelcomeText()
 
 
 
-function resetbioData($ussd, $msisdn)
+function resetSessionVotes($ussd, $msisdn)
 {
     /* 
-    *     if transaction type == Register Personal Pension 
+    *     if transaction type == Entered id 
     *      
-    *     clear incomplete biodata for this session
+    *     clear incomplete votesfor this session
     *
     *     restart the flow   
     */
@@ -528,12 +1092,65 @@ function resetbioData($ussd, $msisdn)
 
     $transactionType = $ussd->GetTransactionType(['msisdn' => $msisdn]);
 
-    if($transactionType == 'Register_Personal_Pension' && $T1 == 'Inserted_Member_id')
+    if($transactionType == 'Entered_ID' && $T1 == 'Presidential_Vote' || $T1 == 'Skipped_Presidential_Vote')
     {
 
-        $member_id = $ussd->getMemberID(['msisdn' => $msisdn]);
+        $student_id = $ussd->getStudentId(['phone' => $msisdn]);
 
-        $ussd->clearIncompleteSessionBioData(['msisdn' => $msisdn, 'member_id' => $member_id]);
+        $ussd->clearIncompleteSessionVotes(['student_id' => $student_id]);
     }
 
+}
+
+
+
+function skipVote($ussd, $msisdn, $tField)
+{
+
+
+    $ussd->updateSessionTFields([
+                    
+        key($tField) => $tField[key($tField)],
+            
+        'msisdn' => $msisdn
+        
+    ]);
+
+}
+
+
+function displayPortfolio()
+{
+    $reply = "1. President \r\n 2. Vice Presidential \r\n 3. Treasurer \r\n 4. Secretary \r\n 5. Organizer";
+
+    
+    return $reply;
+}
+
+
+
+function confirmSessionVotes($msisdn, $ussd)
+{
+    $student_id = $ussd->getStudentId(['phone' => $msisdn]);
+
+    $candidates_voted_for = $ussd->getCandidates(['student_id' => $student_id]);
+
+    $text = array_map(function($candidates){
+
+        return $candidates->candidate_type. ":\t\t". $candidates->name. "\r\n";
+        }, $candidates_voted_for
+    );
+
+
+    $text = implode("\r\n", $text). "\r\n 1. Confirm Vote \r\n 2. Make Change";
+
+    $reply = "YOUR VOTES \r\n ------------ \r\n" . $text;
+     
+    return $reply;
+}
+
+
+function updateSession()
+{
+    
 }

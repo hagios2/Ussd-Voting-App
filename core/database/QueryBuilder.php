@@ -30,7 +30,7 @@ class QueryBuilder
 
         }catch(Exception $e){
 
-         /*    die('Whoops, somthing went wrong'); */
+               /*die('Whoops, somthing went wrong'); */
 
             die($e->getMessage());
 
@@ -194,7 +194,6 @@ class QueryBuilder
 
         unset($parameters[0]);
 
-
        $results = $this->select($sql, $parameters);
 
 
@@ -205,47 +204,20 @@ class QueryBuilder
 
 
 
- 
-
-
-
-     public function selectBioDataCount($parameters)
+    public function clearIncompleteSessionVotes($parameters)
     {
 
         $sql = sprintf(
             
-            "SELECT count(member_id), count(surname), count(firstname), count(other_names), count(dob), count(gender), count(nationality) FROM pensioners_biodata_table WHERE %s = %s", key($parameters), ':'. key($parameters)
-            
-        );
+            "DELETE FROM votes WHERE %s AND %s", 
 
-
-
-       $result = $this->select($sql, $parameters);
-
-       return array_sum(array_values((array)$result[0]));
-
-    }
-
-
-
-    public function clearIncompleteSessionBioData($parameters)
-    {
-
-        $sql = sprintf(
-            
-            "DELETE FROM pensioners_biodata_table WHERE %s AND %s", 
-
-            implode('', [array_key_first($parameters), ' = :'.array_key_first($parameters)]), 
-            
-            implode('', [array_key_last($parameters), ' = :'.array_key_last($parameters)]));
+            implode('', [key($parameters), ' = :'.key($parameters)]));
         
-   
         
         $statement = $this->pdo->prepare($sql);
 
 
         $statement->execute($parameters);
-        #die(var_dump($sql));
 
     }
 
@@ -301,7 +273,7 @@ class QueryBuilder
         $results = (array)$this->select($sql, $parameters);
 
       
-        return $results[0];
+        return $results;
 
  
     }
@@ -332,7 +304,7 @@ class QueryBuilder
     {
         $sql = sprintf(
             
-            "SELECT candidates.name FROM candidates INNER JOIN votes ON votes.candidates_id = candidates.id WHERE %s", 
+            "SELECT candidates.name, candidates.candidate_type FROM candidates INNER JOIN votes ON votes.candidate_id = candidates.id WHERE %s", 
 
             implode('', [array_key_first($parameters), ' = :'.array_key_first($parameters)])
         );
@@ -344,22 +316,6 @@ class QueryBuilder
 
         return (array)$results;
  
-    }
-
-
-    public function approveBioData($parameters)
-    {
-        $sql = sprintf(
-            
-            "UPDATE pensioners_biodata_table SET %s  WHERE %s ", 
-            
-            implode('', [array_key_first($parameters), ' = :'.array_key_first($parameters)]), 
-            
-            implode('', [array_key_last($parameters), ' = :'.array_key_last($parameters)])
-        );
-
-
-        $this->insert($sql, $parameters);
     }
 
 
@@ -379,12 +335,47 @@ class QueryBuilder
 
 
 
-    public function insertOtherBeneficiaryField($parameters)
+    public function confirmVote($parameters)
     {
 
         $sql = sprintf(
             
-            "UPDATE beneficiaries SET %s  WHERE %s ", 
+            "INSERT INTO confirmed_voter (%s) VALUES (%s)", implode(', ', array_keys($parameters)),  ':'.implode(', :', array_keys($parameters))
+        );
+
+
+        $this->insert($sql, $parameters);
+
+    }
+
+
+    public function getVotedStudent($parameters)
+    {
+        $sql = sprintf(
+            
+            "SELECT * FROM confirmed_voter WHERE %s", 
+
+            implode('', [array_key_first($parameters), ' = :'.array_key_first($parameters)])
+        );
+
+
+
+        $results = $this->select($sql, $parameters);
+
+
+        return (array)$results;
+ 
+    }
+
+
+
+
+    public function updateVotes($parameters)
+    {
+
+        $sql = sprintf(
+            
+            "UPDATE votes SET %s  WHERE %s AND %s", 
             
             implode('', [array_key_first($parameters), ' = :'.array_key_first($parameters)]), 
             
@@ -398,6 +389,24 @@ class QueryBuilder
     }
 
 
+    public function findCandidate($parameters)
+    {
+
+        $sql = sprintf(
+            
+            "SELECT * FROM candidates WHERE %s AND %s", 
+
+            implode('', [array_key_first($parameters), ' = :'.array_key_first($parameters)]),
+
+            implode('', [array_key_last($parameters), ' = :'.array_key_last($parameters)])
+        );
+
+        $results = $this->select($sql, $parameters);
+
+
+        return (array)$results;
+
+    }
 
 
 }
